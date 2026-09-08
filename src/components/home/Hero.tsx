@@ -36,9 +36,14 @@ export function Hero() {
           />
         </picture>
 
-        {/* Caption box overlay — the era's signature slider treatment. */}
-        <div className="boxed pointer-events-none absolute inset-x-0 bottom-0 top-0 flex items-center">
-          <div className="pointer-events-auto max-w-xl rounded border border-white/15 bg-jnu-900/80 p-5 md:p-7">
+        {/*
+          Caption box — the era's signature slider treatment.
+          Overlaid from md up, but stacked BELOW the image on phones: the copy
+          is taller than the 280px mobile image, so absolute positioning there
+          spilled the box over the nav bar and the ticker.
+        */}
+        <div className="boxed md:pointer-events-none md:absolute md:inset-x-0 md:bottom-0 md:top-0 md:flex md:items-center">
+          <div className="-mt-6 mb-6 max-w-xl rounded border border-white/15 bg-jnu-900/90 p-5 md:pointer-events-auto md:m-0 md:bg-jnu-900/80 md:p-7">
             <h2
               id="hero-heading"
               className="m-0 font-display text-[22px] uppercase leading-tight tracking-wide text-white md:text-[28px]"

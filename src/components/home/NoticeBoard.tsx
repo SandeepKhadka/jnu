@@ -20,7 +20,10 @@ export function NoticeBoard({ limit = 6 }: { limit?: number }) {
       <div className="panel-body p-0">
         <ul className="m-0 list-none p-0">
           {items.map((n) => {
+            // PDFs must use a plain anchor: next/link prefetches its target as
+            // a route, which requests "<file>.pdf.txt" and 404s.
             const target = n.href ?? n.file
+            const isFile = !n.href && !!n.file
             return (
               <li key={n.id} className="border-b border-hair px-4 py-3 last:border-b-0">
                 <div className="flex items-baseline gap-3">
@@ -35,12 +38,16 @@ export function NoticeBoard({ limit = 6 }: { limit?: number }) {
                   </span>
                 </div>
                 <p className="m-0 mt-1 text-[13.5px] leading-snug">
-                  {target ? (
+                  {!target ? (
+                    n.title
+                  ) : isFile ? (
+                    <a href={target} className="no-underline hover:underline">
+                      {n.title}
+                    </a>
+                  ) : (
                     <Link href={target} className="no-underline hover:underline">
                       {n.title}
                     </Link>
-                  ) : (
-                    n.title
                   )}
                   {n.pinned ? (
                     <span className="ml-2 text-[10px] uppercase tracking-wide text-sand-600">

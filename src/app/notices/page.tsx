@@ -49,7 +49,10 @@ export default function NoticesPage() {
       >
         <ul className="m-0 list-none p-0">
           {sortedNotices.map((n) => {
+            // PDFs must use a plain anchor: next/link prefetches its target as
+            // a route, which requests "<file>.pdf.txt" and 404s.
             const target = n.href ?? n.file
+            const isFile = !n.href && !!n.file
             return (
               <li
                 key={n.id}
@@ -62,12 +65,16 @@ export default function NoticesPage() {
                   {n.category}
                 </span>
                 <span className="min-w-0 flex-1 text-[14px]">
-                  {target ? (
+                  {!target ? (
+                    n.title
+                  ) : isFile ? (
+                    <a href={target} className="no-underline hover:underline">
+                      {n.title}
+                    </a>
+                  ) : (
                     <Link href={target} className="no-underline hover:underline">
                       {n.title}
                     </Link>
-                  ) : (
-                    n.title
                   )}
                   {n.pinned ? (
                     <span className="ml-2 text-[10px] uppercase tracking-wide text-sand-600">
