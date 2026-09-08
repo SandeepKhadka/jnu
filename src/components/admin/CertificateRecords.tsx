@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { site } from '@/content/site'
 import { allProgrammes } from '@/content/programmes'
 import {
@@ -336,6 +337,16 @@ function StatusPill({ status }: { status: CertificateRecord['status'] }) {
   )
 }
 
+/**
+ * Rendered through a portal into document.body, not in place.
+ *
+ * This is required, not stylistic. The print rules isolate the certificate by
+ * hiding `body.cert-printing > *:not(#cert-overlay)`. Left where it is
+ * declared, the overlay sits five levels deep inside <main>, so hiding main's
+ * children would hide the certificate along with everything else — which is
+ * exactly why the print preview came out blank. As a direct child of <body> it
+ * survives that rule.
+ */
 function PreviewOverlay({
   cert,
   onClose,
@@ -343,6 +354,10 @@ function PreviewOverlay({
   cert: CertificateRecord
   onClose: () => void
 }) {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => setMounted(true), [])
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose()
@@ -351,7 +366,10 @@ function PreviewOverlay({
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  return (
+  // document.body does not exist during the static export's prerender.
+  if (!mounted) return null
+
+  return createPortal(
     <div
       id="cert-overlay"
       className="fixed inset-0 z-50 overflow-auto bg-jnu-900/70 p-4"
@@ -385,8 +403,13 @@ function PreviewOverlay({
           Verifiable at {site.url.replace(/^https?:\/\//, '')}/verify/ — certificate number{' '}
           <span className="tnum">{cert.certificate_no}</span>
         </p>
+        <p className="no-print mt-1 text-center text-[11.5px] text-jnu-200">
+          In the print dialog, tick <strong>Background graphics</strong> for the tinted
+          paper and seal. The watermark and all text print either way.
+        </p>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

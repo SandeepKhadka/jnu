@@ -207,13 +207,18 @@
   .panel { border: 1px solid #000; box-shadow: none; }
 
   /*
-   * Certificate printing. The overlay is fixed on screen, but a fixed element
-   * prints only on the first page, so it becomes static here. Site chrome is
-   * hidden so the sheet is the only thing on the page.
+   * Certificate printing.
+   *
+   * #cert-overlay is portalled to document.body precisely so this rule can
+   * work: it hides every OTHER direct child of body, leaving the certificate
+   * alone on the page. Matching on `main > *` instead would hide main's
+   * wrapper div and take the nested overlay down with it — that bug printed a
+   * blank page.
+   *
+   * The overlay is fixed on screen, but a fixed element prints only on the
+   * first page, so it becomes static here.
    */
-  body.cert-printing header,
-  body.cert-printing footer,
-  body.cert-printing main > *:not(#cert-overlay) {
+  body.cert-printing > *:not(#cert-overlay) {
     display: none !important;
   }
   body.cert-printing #cert-overlay {

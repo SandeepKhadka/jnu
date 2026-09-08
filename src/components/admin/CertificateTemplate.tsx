@@ -312,6 +312,35 @@ export function CertificateTemplate({ cert }: { cert: CertificateRecord }) {
             padding: 0;
           }
         }
+
+        @media print {
+          /*
+           * Chrome drops background-image unless the user ticks "Background
+           * graphics", so anything that relies on one has to degrade. The seal
+           * was white text on a gradient — invisible on paper. Give it a real
+           * border and dark ink instead, which reads correctly whether or not
+           * backgrounds are enabled.
+           */
+          .cert-seal {
+            background: none !important;
+            color: #123f63 !important;
+            border: 2px solid #123f63;
+          }
+          .cert-inner {
+            background: none !important;
+          }
+          /* The specimen mark must be unmistakable on paper, not a faint tint. */
+          .cert-watermark span {
+            color: rgba(168, 50, 43, 0.3) !important;
+          }
+          .cert-watermark-sub {
+            color: rgba(168, 50, 43, 0.42) !important;
+          }
+          .cert-sheet {
+            padding: 0;
+            max-width: none;
+          }
+        }
       `}</style>
     </div>
   )
