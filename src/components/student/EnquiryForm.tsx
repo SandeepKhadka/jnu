@@ -2,9 +2,8 @@
 
 import { useState } from 'react'
 import { site } from '@/content/site'
-import { getSupabase } from '@/lib/supabase'
 
-type State = 'idle' | 'sending' | 'sent' | 'error' | 'unconfigured'
+type State = 'idle' | 'sending' | 'sent' | 'error'
 
 /**
  * Enquiry capture. Writes to a Supabase `enquiries` table when configured;
@@ -35,22 +34,28 @@ export function EnquiryForm() {
       return
     }
 
-    const supabase = getSupabase()
-    if (!supabase) {
-      setState('unconfigured')
-      return
-    }
-
     setState('sending')
-    const { error } = await supabase.from('enquiries').insert({
-      name: form.name.trim(),
-      email: form.email.trim(),
-      phone: form.phone.trim() || null,
-      programme: form.programme.trim() || null,
-      message: form.message.trim(),
-    })
 
-    setState(error ? 'error' : 'sent')
+    // Local mode: enquiries are queued in this browser. A real deployment
+    // points this at a Supabase table plus a transactional email send — see
+    // the README. Keeping it local means the form always works in the demo
+    // rather than dead-ending on a missing service.
+    try {
+      const key = 'jnu.enquiries.v1'
+      const existing = JSON.parse(window.localStorage.getItem(key) ?? '[]')
+      existing.unshift({
+        at: new Date().toISOString(),
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim() || null,
+        programme: form.programme.trim() || null,
+        message: form.message.trim(),
+      })
+      window.localStorage.setItem(key, JSON.stringify(existing.slice(0, 100)))
+      setState('sent')
+    } catch {
+      setState('error')
+    }
   }
 
   if (state === 'sent') {
@@ -129,13 +134,6 @@ export function EnquiryForm() {
         {state === 'error' ? (
           <p role="alert" className="m-0 mt-3 text-[13px] font-semibold text-[#a8322b]">
             The enquiry could not be sent. Please email {site.email} instead.
-          </p>
-        ) : null}
-
-        {state === 'unconfigured' ? (
-          <p role="alert" className="m-0 mt-3 text-[13px] text-muted">
-            The enquiry service is not configured yet. Please email{' '}
-            <a href={`mailto:${site.email}`}>{site.email}</a>.
           </p>
         ) : null}
 

@@ -2,20 +2,17 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getSupabase } from '@/lib/supabase'
+import { signIn, getMode } from '@/lib/store'
+import { demoStaff } from '@/content/seed'
 
 /**
  * Staff login, served from the public site as requested.
  *
- * What makes this a real login rather than a decorative one: no credential of
- * any kind lives in this bundle. The form posts to Supabase Auth, which does
- * the password hashing (bcrypt) and returns a signed JWT. This file contains
- * no password to find in DevTools.
- *
- * The corollary, worth being explicit about: hiding this page proves nothing.
- * Security comes from the RLS policies in supabase/schema.sql, which reject
- * writes from anyone who is not in the `staff` table — not from the login
- * screen being hard to locate.
+ * In local (zero-config) mode this checks the demo accounts in
+ * content/seed.ts. Those credentials are in the bundle and readable — that is
+ * fine for an academic project and stated plainly below, so nobody mistakes it
+ * for real access control. Configuring Supabase replaces this path with real
+ * server-side password hashing; see the README.
  */
 export function LoginForm() {
   const router = useRouter()
@@ -24,27 +21,27 @@ export function LoginForm() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const mode = getMode()
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-
-    const supabase = getSupabase()
-    if (!supabase) {
-      setError('Authentication is not configured. See the README.')
-      return
-    }
-
     setBusy(true)
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
+
+    const res = await signIn(email, password)
     setBusy(false)
 
-    if (authError) {
-      // Deliberately generic: never reveal whether the account exists.
-      setError('Incorrect email or password.')
+    if (!res.ok) {
+      setError(res.error)
       return
     }
-
     router.push('/admin/')
+  }
+
+  function fill(i: number) {
+    setEmail(demoStaff[i].email)
+    setPassword(demoStaff[i].password)
+    setError(null)
   }
 
   return (
@@ -91,6 +88,36 @@ export function LoginForm() {
         <button type="submit" disabled={busy} className="btn btn-primary w-full">
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
+
+        {mode === 'local' ? (
+          <div className="mt-5 rounded border border-hair border-l-[3px] border-l-sand-500 bg-shell p-3">
+            <p className="m-0 mb-2 text-[11px] font-semibold uppercase tracking-wide text-sand-600">
+              Demo accounts — academic project
+            </p>
+            <ul className="m-0 list-none space-y-1.5 p-0 text-[12.5px]">
+              {demoStaff.map((s, i) => (
+                <li key={s.email} className="flex flex-wrap items-baseline gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fill(i)}
+                    className="tnum text-jnu-600 underline"
+                  >
+                    {s.email}
+                  </button>
+                  <span className="tnum text-muted">{s.password}</span>
+                  <span className="text-[11px] uppercase tracking-wide text-muted">
+                    {s.role.replace('_', ' ')}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="m-0 mt-2.5 text-[11.5px] leading-relaxed text-muted">
+              These are checked in the browser, so they are not real access control —
+              acceptable for a project demo only. Configure Supabase for server-side
+              authentication before any live use.
+            </p>
+          </div>
+        ) : null}
       </div>
     </form>
   )

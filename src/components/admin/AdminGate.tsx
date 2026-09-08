@@ -3,99 +3,37 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import type { User } from '@supabase/supabase-js'
-import { getSupabase } from '@/lib/supabase'
+import { getSession, signOut, getMode, storageAvailable, type Session } from '@/lib/store'
 
 type Gate =
   | { kind: 'checking' }
   | { kind: 'anon' }
-  | { kind: 'unconfigured' }
-  | { kind: 'ok'; user: User; staffName: string; role: string }
-  | { kind: 'not-staff' }
+  | { kind: 'ok'; session: Session }
 
 /**
- * Client-side session gate for /admin.
+ * Session gate for /admin.
  *
- * Being honest about what this is: on a static site the gate cannot be
- * enforced at the edge, so this only decides what the UI renders. It is a
- * convenience, not the security boundary. The boundary is RLS — an
- * unauthenticated or non-staff caller who bypasses this component entirely
- * still cannot read or write a single protected row.
+ * Honest about what this is: on a static site the gate cannot be enforced at
+ * the edge, so it decides what the UI renders and nothing more. In local mode
+ * that is the whole of it. With Supabase configured, Row Level Security is the
+ * real boundary and this stays a convenience.
  */
 export function AdminGate({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [gate, setGate] = useState<Gate>({ kind: 'checking' })
 
   useEffect(() => {
-    const supabase = getSupabase()
-    if (!supabase) {
-      setGate({ kind: 'unconfigured' })
-      return
-    }
-
-    let cancelled = false
-
-    async function check() {
-      const supabase = getSupabase()!
-      const { data } = await supabase.auth.getSession()
-      const user = data.session?.user
-
-      if (!user) {
-        if (!cancelled) setGate({ kind: 'anon' })
-        return
-      }
-
-      // Membership of `staff` is what grants write access via RLS.
-      const { data: staff } = await supabase
-        .from('staff')
-        .select('full_name, role')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      if (cancelled) return
-
-      if (!staff) {
-        setGate({ kind: 'not-staff' })
-        return
-      }
-
-      setGate({ kind: 'ok', user, staffName: staff.full_name, role: staff.role })
-    }
-
-    check()
-
-    const { data: sub } = supabase.auth.onAuthStateChange(() => {
-      if (!cancelled) check()
-    })
-
-    return () => {
-      cancelled = true
-      sub.subscription.unsubscribe()
-    }
+    const session = getSession()
+    setGate(session ? { kind: 'ok', session } : { kind: 'anon' })
   }, [])
 
-  async function signOut() {
-    await getSupabase()?.auth.signOut()
+  async function onSignOut() {
+    await signOut()
     router.push('/')
   }
 
   if (gate.kind === 'checking') {
     return <p className="boxed py-12 text-[14px] text-muted">Checking session…</p>
-  }
-
-  if (gate.kind === 'unconfigured') {
-    return (
-      <div className="boxed py-12">
-        <div className="panel mx-auto max-w-lg p-5">
-          <h1 className="m-0 mb-2 font-display text-[19px] text-jnu-800">Admin not configured</h1>
-          <p className="m-0 text-[13.5px] text-muted">
-            Set <code>NEXT_PUBLIC_SUPABASE_URL</code> and{' '}
-            <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in <code>.env.local</code>, run{' '}
-            <code>supabase/schema.sql</code>, then invite a staff user. See the README.
-          </p>
-        </div>
-      </div>
-    )
   }
 
   if (gate.kind === 'anon') {
@@ -114,37 +52,70 @@ export function AdminGate({ children }: { children: React.ReactNode }) {
     )
   }
 
-  if (gate.kind === 'not-staff') {
-    return (
-      <div className="boxed py-12">
-        <div className="panel mx-auto max-w-lg p-5">
-          <h1 className="m-0 mb-2 font-display text-[19px] text-jnu-800">Not authorised</h1>
-          <p className="m-0 mb-4 text-[13.5px] text-muted">
-            This account is signed in but is not registered as staff. Ask the registrar to
-            add your account before trying again.
+  return (
+    <div className="boxed py-8">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-hair pb-4">
+        <div>
+          <h1 className="m-0 font-display text-[22px] text-jnu-800">Administration</h1>
+          <p className="m-0 text-xs text-muted">
+            {gate.session.full_name} ·{' '}
+            <span className="uppercase tracking-wide">
+              {gate.session.role.replace('_', ' ')}
+            </span>
           </p>
-          <button type="button" onClick={signOut} className="btn btn-secondary">
-            Sign out
-          </button>
         </div>
+        <button type="button" onClick={onSignOut} className="btn btn-secondary">
+          Sign out
+        </button>
+      </div>
+
+      <ModeBanner />
+      {children}
+    </div>
+  )
+}
+
+/** States the storage model plainly, so nobody is surprised by its limits. */
+function ModeBanner() {
+  const [noStorage, setNoStorage] = useState(false)
+  const mode = getMode()
+
+  useEffect(() => {
+    setNoStorage(!storageAvailable())
+  }, [])
+
+  if (noStorage) {
+    return (
+      <div className="mb-5 rounded border border-hair border-l-[3px] border-l-[#a8322b] bg-white px-4 py-3">
+        <p className="m-0 text-[13px] text-muted">
+          <strong className="text-[#a8322b]">Storage unavailable. </strong>
+          This browser is blocking site data (a private window, or blocked storage
+          settings), so changes made here cannot be saved. Seed data still displays, but
+          edits will be lost on reload.
+        </p>
+      </div>
+    )
+  }
+
+  if (mode === 'supabase') {
+    return (
+      <div className="mb-5 rounded border border-hair border-l-[3px] border-l-[#2c6549] bg-white px-4 py-3">
+        <p className="m-0 text-[13px] text-muted">
+          <strong className="text-[#2c6549]">Supabase mode. </strong>
+          Connected to a hosted database with server-side authentication.
+        </p>
       </div>
     )
   }
 
   return (
-    <div className="boxed py-8">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-hair pb-4">
-        <div>
-          <h1 className="m-0 font-display text-[22px] text-jnu-800">Administration</h1>
-          <p className="m-0 text-xs text-muted">
-            {gate.staffName} · <span className="uppercase tracking-wide">{gate.role.replace('_', ' ')}</span>
-          </p>
-        </div>
-        <button type="button" onClick={signOut} className="btn btn-secondary">
-          Sign out
-        </button>
-      </div>
-      {children}
+    <div className="mb-5 rounded border border-hair border-l-[3px] border-l-sand-500 bg-white px-4 py-3">
+      <p className="m-0 text-[13px] text-muted">
+        <strong className="text-jnu-800">Local demo mode. </strong>
+        Data comes from the seed file and your changes are saved in this browser
+        (localStorage), so the admin panel and the public pages stay in step on this
+        machine. Changes do not sync to other devices — configure Supabase for that.
+      </p>
     </div>
   )
 }

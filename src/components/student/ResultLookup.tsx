@@ -1,40 +1,23 @@
 'use client'
 
 import { useState } from 'react'
-import { getSupabase } from '@/lib/supabase'
-
-type Subject = { code?: string; name: string; max?: number; obtained?: number; grade?: string }
-
-type ResultRow = {
-  roll_no: string
-  student_name: string
-  programme: string
-  semester: string
-  exam_session: string
-  subjects: Subject[]
-  marks_obtained: number | null
-  marks_max: number | null
-  sgpa: number | null
-  status: string
-}
+import { findPublishedResults, type ResultRecord } from '@/lib/store'
 
 type State =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'found'; rows: ResultRow[] }
+  | { kind: 'found'; rows: ResultRecord[] }
   | { kind: 'invalid'; roll: string }
-  | { kind: 'error'; message: string }
-  | { kind: 'unconfigured' }
 
 /**
  * The behaviour asked for: a roll number the exam cell has published returns
  * the marksheet; anything else returns "Invalid roll number".
  *
- * Two things make the "invalid" path correct rather than merely convenient:
- *  - RLS restricts anon SELECT to `published = true`, so an unpublished result
- *    is indistinguishable from a non-existent one. Staff cannot leak a draft.
- *  - The message never distinguishes "no such student" from "not published",
- *    which would otherwise let anyone enumerate enrolled roll numbers.
+ * The "invalid" path is correct rather than merely convenient, because the
+ * store only ever returns published rows. An unpublished result is therefore
+ * indistinguishable from a non-existent one, and the message does not
+ * distinguish "no such student" from "not published" — which would otherwise
+ * let anyone enumerate enrolled roll numbers.
  */
 export function ResultLookup() {
   const [roll, setRoll] = useState('')
@@ -46,34 +29,10 @@ export function ResultLookup() {
     const value = roll.trim().toUpperCase()
     if (!value) return
 
-    const supabase = getSupabase()
-    if (!supabase) {
-      setState({ kind: 'unconfigured' })
-      return
-    }
-
     setState({ kind: 'loading' })
+    const rows = await findPublishedResults(value)
 
-    const { data, error } = await supabase
-      .from('results')
-      .select(
-        'roll_no, student_name, programme, semester, exam_session, subjects, marks_obtained, marks_max, sgpa, status'
-      )
-      .eq('roll_no', value)
-      .eq('published', true)
-      .order('semester', { ascending: false })
-
-    if (error) {
-      setState({ kind: 'error', message: 'Could not reach the results service. Please try again.' })
-      return
-    }
-
-    if (!data || data.length === 0) {
-      setState({ kind: 'invalid', roll: value })
-      return
-    }
-
-    setState({ kind: 'found', rows: data as ResultRow[] })
+    setState(rows.length > 0 ? { kind: 'found', rows } : { kind: 'invalid', roll: value })
   }
 
   return (
@@ -89,13 +48,12 @@ export function ResultLookup() {
               id="roll"
               name="roll"
               type="text"
-              inputMode="text"
               autoComplete="off"
               required
               maxLength={24}
               value={roll}
               onChange={(e) => setRoll(e.target.value)}
-              placeholder="e.g. JNU2026BT0147"
+              placeholder="JNU2024BT0147"
               aria-describedby="roll-help"
               className="w-full max-w-[260px] rounded border border-hair px-3 py-2 text-[14px] uppercase tracking-wide focus:border-jnu-400"
             />
@@ -107,6 +65,27 @@ export function ResultLookup() {
             Results appear here only after the examination cell has published them.
             Enter the roll number exactly as printed on your admit card.
           </p>
+
+          <p className="m-0 mt-3 rounded border border-hair bg-shell px-3 py-2 text-xs text-muted">
+            <strong className="text-jnu-800">Sample roll numbers: </strong>
+            <button type="button" onClick={() => setRoll('JNU2024BT0147')} className="underline">
+              JNU2024BT0147
+            </button>
+            {' · '}
+            <button type="button" onClick={() => setRoll('JNU2025MB0088')} className="underline">
+              JNU2025MB0088
+            </button>
+            {' · '}
+            <button type="button" onClick={() => setRoll('JNU2024BT0166')} className="underline">
+              JNU2024BT0166
+            </button>{' '}
+            (ATKT)
+            {' · '}
+            <button type="button" onClick={() => setRoll('JNU2024BT0171')} className="underline">
+              JNU2024BT0171
+            </button>{' '}
+            (unpublished — returns invalid)
+          </p>
         </div>
       </form>
 
@@ -116,41 +95,24 @@ export function ResultLookup() {
           <div className="panel border-l-[3px] border-l-[#a8322b] p-4">
             <p className="m-0 text-[14px] font-semibold text-[#a8322b]">Invalid roll number</p>
             <p className="m-0 mt-1 text-[13px] text-muted">
-              No published result was found for <span className="tnum font-semibold">{state.roll}</span>.
-              Check the number and try again. If your examination result has not yet been
-              declared, it will not appear here.
-            </p>
-          </div>
-        ) : null}
-
-        {state.kind === 'error' ? (
-          <div className="panel border-l-[3px] border-l-[#9a6a10] p-4">
-            <p className="m-0 text-[14px] font-semibold text-[#9a6a10]">Service unavailable</p>
-            <p className="m-0 mt-1 text-[13px] text-muted">{state.message}</p>
-          </div>
-        ) : null}
-
-        {state.kind === 'unconfigured' ? (
-          <div className="panel border-l-[3px] border-l-[#9a6a10] p-4">
-            <p className="m-0 text-[14px] font-semibold text-[#9a6a10]">Results service not configured</p>
-            <p className="m-0 mt-1 text-[13px] text-muted">
-              Set <code>NEXT_PUBLIC_SUPABASE_URL</code> and{' '}
-              <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in <code>.env.local</code>, then run{' '}
-              <code>supabase/schema.sql</code>. See the README.
+              No published result was found for{' '}
+              <span className="tnum font-semibold">{state.roll}</span>. Check the number and
+              try again. If your result has not yet been declared, it will not appear here.
             </p>
           </div>
         ) : null}
 
         {state.kind === 'found'
-          ? state.rows.map((r) => <Marksheet key={`${r.roll_no}-${r.semester}`} row={r} />)
+          ? state.rows.map((r) => <Marksheet key={r.id} row={r} />)
           : null}
       </div>
     </div>
   )
 }
 
-function Marksheet({ row }: { row: ResultRow }) {
+function Marksheet({ row }: { row: ResultRecord }) {
   const subjects = Array.isArray(row.subjects) ? row.subjects : []
+  const pct = row.marks_max > 0 ? (row.marks_obtained / row.marks_max) * 100 : 0
 
   return (
     <article className="panel mb-5">
@@ -162,7 +124,9 @@ function Marksheet({ row }: { row: ResultRow }) {
           className={`rounded-sm border px-2 py-0.5 text-[11px] uppercase tracking-wide ${
             row.status === 'PASS'
               ? 'border-[#2c6549] text-[#2c6549]'
-              : 'border-[#a8322b] text-[#a8322b]'
+              : row.status === 'ATKT'
+                ? 'border-[#9a6a10] text-[#9a6a10]'
+                : 'border-[#a8322b] text-[#a8322b]'
           }`}
         >
           {row.status}
@@ -171,22 +135,12 @@ function Marksheet({ row }: { row: ResultRow }) {
 
       <div className="panel-body">
         <dl className="m-0 mb-4 grid gap-x-6 gap-y-2 text-[13.5px] sm:grid-cols-2">
-          <div className="flex gap-2">
-            <dt className="w-28 shrink-0 text-muted">Roll Number</dt>
-            <dd className="tnum m-0 font-semibold">{row.roll_no}</dd>
-          </div>
-          <div className="flex gap-2">
-            <dt className="w-28 shrink-0 text-muted">Name</dt>
-            <dd className="m-0 font-semibold">{row.student_name}</dd>
-          </div>
-          <div className="flex gap-2">
-            <dt className="w-28 shrink-0 text-muted">Programme</dt>
-            <dd className="m-0">{row.programme}</dd>
-          </div>
-          <div className="flex gap-2">
-            <dt className="w-28 shrink-0 text-muted">SGPA</dt>
-            <dd className="tnum m-0">{row.sgpa ?? '—'}</dd>
-          </div>
+          <Row label="Roll Number" value={row.roll_no} mono bold />
+          <Row label="Name" value={row.student_name} bold />
+          <Row label="Programme" value={row.programme} />
+          <Row label="SGPA" value={row.sgpa.toFixed(2)} mono />
+          <Row label="Marks" value={`${row.marks_obtained} / ${row.marks_max}`} mono />
+          <Row label="Percentage" value={`${pct.toFixed(2)}%`} mono />
         </dl>
 
         {subjects.length > 0 ? (
@@ -203,33 +157,44 @@ function Marksheet({ row }: { row: ResultRow }) {
               </thead>
               <tbody>
                 {subjects.map((s, i) => (
-                  <tr key={`${s.code ?? s.name}-${i}`}>
-                    <td className="tnum border border-hair px-3 py-2">{s.code ?? '—'}</td>
+                  <tr key={`${s.code}-${i}`}>
+                    <td className="tnum border border-hair px-3 py-2">{s.code}</td>
                     <td className="border border-hair px-3 py-2">{s.name}</td>
-                    <td className="tnum border border-hair px-3 py-2 text-right">{s.max ?? '—'}</td>
-                    <td className="tnum border border-hair px-3 py-2 text-right">{s.obtained ?? '—'}</td>
-                    <td className="border border-hair px-3 py-2">{s.grade ?? '—'}</td>
+                    <td className="tnum border border-hair px-3 py-2 text-right">{s.max}</td>
+                    <td
+                      className={`tnum border border-hair px-3 py-2 text-right ${
+                        s.obtained < s.max * 0.4 ? 'font-semibold text-[#a8322b]' : ''
+                      }`}
+                    >
+                      {s.obtained}
+                    </td>
+                    <td className="border border-hair px-3 py-2">{s.grade}</td>
                   </tr>
                 ))}
               </tbody>
-              {row.marks_max != null ? (
-                <tfoot>
-                  <tr>
-                    <td colSpan={2} className="border border-hair bg-shell px-3 py-2 font-semibold">
-                      Total
-                    </td>
-                    <td className="tnum border border-hair bg-shell px-3 py-2 text-right font-semibold">
-                      {row.marks_max}
-                    </td>
-                    <td className="tnum border border-hair bg-shell px-3 py-2 text-right font-semibold">
-                      {row.marks_obtained ?? '—'}
-                    </td>
-                    <td className="border border-hair bg-shell px-3 py-2" />
-                  </tr>
-                </tfoot>
-              ) : null}
+              <tfoot>
+                <tr>
+                  <td colSpan={2} className="border border-hair bg-shell px-3 py-2 font-semibold">
+                    Total
+                  </td>
+                  <td className="tnum border border-hair bg-shell px-3 py-2 text-right font-semibold">
+                    {row.marks_max}
+                  </td>
+                  <td className="tnum border border-hair bg-shell px-3 py-2 text-right font-semibold">
+                    {row.marks_obtained}
+                  </td>
+                  <td className="border border-hair bg-shell px-3 py-2" />
+                </tr>
+              </tfoot>
             </table>
           </div>
+        ) : null}
+
+        {row.status === 'ATKT' ? (
+          <p className="m-0 mt-4 text-[13px] text-[#9a6a10]">
+            Subjects below the minimum are shown in red. You are permitted to carry these
+            forward and must appear in the next available back-paper examination.
+          </p>
         ) : null}
 
         <p className="m-0 mt-4 text-xs text-muted">
@@ -244,5 +209,24 @@ function Marksheet({ row }: { row: ResultRow }) {
         </p>
       </div>
     </article>
+  )
+}
+
+function Row({
+  label,
+  value,
+  mono = false,
+  bold = false,
+}: {
+  label: string
+  value: string
+  mono?: boolean
+  bold?: boolean
+}) {
+  return (
+    <div className="flex gap-2">
+      <dt className="w-28 shrink-0 text-muted">{label}</dt>
+      <dd className={`m-0 ${mono ? 'tnum' : ''} ${bold ? 'font-semibold' : ''}`}>{value}</dd>
+    </div>
   )
 }

@@ -108,12 +108,13 @@ function BlockView({ block }: { block: Block }) {
         </div>
       )
     case 'note':
-      // Visible on purpose: an unfinished page should say so rather than
-      // present placeholder prose as if it were the university's own copy.
+      // Advisory callout — either guidance for the reader (how to verify a
+      // recognition claim, how to pay safely) or a standing instruction to
+      // whoever maintains the site. Visible on purpose in both cases.
       return (
         <aside className="my-5 rounded border border-hair border-l-[3px] border-l-sand-500 bg-white px-4 py-3">
           <p className="m-0 text-[13px] text-muted">
-            <strong className="text-jnu-800">Content pending: </strong>
+            <strong className="text-jnu-800">Please note: </strong>
             {block.text}
           </p>
         </aside>

@@ -4,13 +4,15 @@ import { useState } from 'react'
 import { ResultsManager } from './ResultsManager'
 import { CertificateRecords } from './CertificateRecords'
 import { NoticeHelper } from './NoticeHelper'
+import { AuditLog } from './AuditLog'
 
-type Tab = 'results' | 'certificates' | 'notices'
+type Tab = 'results' | 'certificates' | 'notices' | 'audit'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'results', label: 'Examination Results' },
-  { id: 'certificates', label: 'Certificate Register' },
+  { id: 'certificates', label: 'Certificates' },
   { id: 'notices', label: 'Notices' },
+  { id: 'audit', label: 'Audit Log' },
 ]
 
 export function AdminTabs() {
@@ -18,7 +20,11 @@ export function AdminTabs() {
 
   return (
     <div>
-      <div role="tablist" aria-label="Administration sections" className="mb-6 flex flex-wrap gap-1 border-b border-hair">
+      <div
+        role="tablist"
+        aria-label="Administration sections"
+        className="mb-6 flex flex-wrap gap-1 border-b border-hair"
+      >
         {TABS.map((t) => {
           const active = tab === t.id
           return (
@@ -46,6 +52,7 @@ export function AdminTabs() {
         {tab === 'results' ? <ResultsManager /> : null}
         {tab === 'certificates' ? <CertificateRecords /> : null}
         {tab === 'notices' ? <NoticeHelper /> : null}
+        {tab === 'audit' ? <AuditLog /> : null}
       </div>
     </div>
   )

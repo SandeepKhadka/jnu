@@ -205,4 +205,32 @@
   .no-print { display: none !important; }
   body { background: #fff; font-size: 12px; }
   .panel { border: 1px solid #000; box-shadow: none; }
+
+  /*
+   * Certificate printing. The overlay is fixed on screen, but a fixed element
+   * prints only on the first page, so it becomes static here. Site chrome is
+   * hidden so the sheet is the only thing on the page.
+   */
+  body.cert-printing header,
+  body.cert-printing footer,
+  body.cert-printing main > *:not(#cert-overlay) {
+    display: none !important;
+  }
+  body.cert-printing #cert-overlay {
+    position: static !important;
+    inset: auto !important;
+    z-index: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+    padding: 0 !important;
+  }
+  /* Watermark and seal are meaningful, not decoration — keep their colour. */
+  body.cert-printing * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
 }

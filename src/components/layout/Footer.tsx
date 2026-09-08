@@ -72,6 +72,10 @@ export function Footer() {
         <div className="boxed flex flex-wrap items-center justify-between gap-2 py-3 text-xs">
           <p className="m-0">
             © {year} {site.legalName}. All rights reserved.
+            {/* Stated plainly, because certificates and results are generated here. */}
+            <span className="ml-2 text-jnu-300">
+              Academic demonstration project — not the official university website.
+            </span>
           </p>
           <nav aria-label="Legal" className="flex gap-4">
             <Link href="/privacy/" className="text-jnu-200 no-underline hover:text-white hover:underline">
