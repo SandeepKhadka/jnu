@@ -31,7 +31,11 @@ export function MainNav() {
           className={`${open ? 'block' : 'hidden'} lg:flex lg:flex-wrap lg:items-stretch`}
         >
           {nav.map((item) => (
-            <li key={item.href} className="nav-item relative lg:static">
+            // `relative` at every breakpoint on purpose: the panel below is
+            // absolutely positioned with top-full, so this <li> has to be its
+            // containing block. With `lg:static` here the panel resolved
+            // against the document instead and dropped a full page height.
+            <li key={item.href} className="nav-item relative">
               <Link
                 href={item.href}
                 className="block px-3 py-2.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-white no-underline hover:bg-jnu-700 hover:text-white lg:py-3"
