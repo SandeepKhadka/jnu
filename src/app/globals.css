@@ -1,0 +1,208 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Deliberately mid-2010s institutional chrome.
+ *
+ * The era markers, chosen on purpose and not to be "modernised":
+ *   - boxed 1210px content column on a grey shell
+ *   - vertical gradients on the nav bar, buttons and section headers
+ *   - 3px radii, 1px #e1e1e1 hairlines, inset highlight on raised elements
+ *   - 13-14px body copy, uppercase 12px nav labels with letter-spacing
+ *   - hover-opened dropdown menus
+ * What is NOT period-accurate, because it would cost us the SEO goal:
+ *   the 59-stylesheet load, the 2.5MB slider, and table-based layout.
+ */
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-shell text-ink font-sans;
+    font-size: 14px;
+    line-height: 1.65;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display text-jnu-800;
+    font-weight: 400;
+    line-height: 1.25;
+  }
+
+  a {
+    @apply text-jnu-600;
+    text-decoration: none;
+  }
+  a:hover {
+    @apply text-jnu-800;
+    text-decoration: underline;
+  }
+
+  /* Visible keyboard focus — absent from the original, required for WCAG 2.2 AA. */
+  :focus-visible {
+    outline: 2px solid #2d81c8;
+    outline-offset: 2px;
+  }
+
+  /* Skip link, hidden until focused. */
+  .skip-link {
+    @apply absolute left-2 z-50 bg-white px-4 py-2 text-jnu-700 shadow-chrome;
+    top: -100px;
+  }
+  .skip-link:focus {
+    top: 0.5rem;
+  }
+}
+
+@layer components {
+  /* ---- boxed shell ---------------------------------------------------- */
+  .boxed {
+    @apply mx-auto w-full max-w-boxed px-4;
+  }
+
+  /* ---- period chrome: vertical gradients ------------------------------ */
+  .chrome-nav {
+    background: linear-gradient(to bottom, #2d81c8 0%, #1f6aa8 100%);
+    border-bottom: 3px solid #123f63;
+  }
+
+  .chrome-topbar {
+    background: #123f63;
+  }
+
+  /* Section heading with the era's underline-rule treatment. */
+  .rule-heading {
+    @apply relative mb-5 pb-2 font-display text-[19px] uppercase tracking-wide text-jnu-800;
+    border-bottom: 1px solid theme('colors.hair');
+  }
+  .rule-heading::after {
+    content: '';
+    @apply absolute bottom-0 left-0 block h-[3px] w-14 bg-jnu-500;
+  }
+
+  /* ---- buttons -------------------------------------------------------- */
+  .btn {
+    @apply inline-block cursor-pointer rounded border px-4 py-2 text-center text-[13px] font-semibold uppercase tracking-wide no-underline transition-colors;
+  }
+  .btn-primary {
+    @apply border-jnu-700 text-white shadow-raised;
+    background: linear-gradient(to bottom, #3d87c8 0%, #1f6aa8 100%);
+  }
+  .btn-primary:hover {
+    background: linear-gradient(to bottom, #2d81c8 0%, #185484 100%);
+    @apply text-white no-underline;
+  }
+  .btn-secondary {
+    @apply border-hair bg-white text-jnu-700;
+  }
+  .btn-secondary:hover {
+    @apply bg-shell text-jnu-800 no-underline;
+  }
+  .btn-sand {
+    @apply border-sand-600 text-white shadow-raised;
+    background: linear-gradient(to bottom, #d99b4a 0%, #c8863a 100%);
+  }
+  .btn-sand:hover {
+    background: linear-gradient(to bottom, #c8863a 0%, #a86d2b 100%);
+    @apply text-white no-underline;
+  }
+
+  /* ---- panels --------------------------------------------------------- */
+  .panel {
+    @apply rounded border border-hair bg-white shadow-chrome;
+  }
+  .panel-head {
+    @apply border-b border-hair px-4 py-3 font-display text-[15px] uppercase tracking-wide text-jnu-800;
+    background: linear-gradient(to bottom, #ffffff 0%, #f4f4f4 100%);
+  }
+  .panel-body {
+    @apply px-4 py-4;
+  }
+
+  /* ---- icon box (the era's signature homepage module) ----------------- */
+  .iconbox-badge {
+    @apply mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full text-white;
+    background: linear-gradient(to bottom, #3d87c8 0%, #1f6aa8 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+
+  /* ---- dropdown nav --------------------------------------------------- */
+  .nav-item > .nav-panel {
+    display: none;
+  }
+  .nav-item:hover > .nav-panel,
+  .nav-item:focus-within > .nav-panel {
+    display: block;
+  }
+
+  /* ---- prose for inner content pages ---------------------------------- */
+  .prose-jnu {
+    @apply text-[14px] leading-[1.75];
+  }
+  .prose-jnu p {
+    @apply mb-4;
+  }
+  .prose-jnu h2 {
+    @apply mb-3 mt-7 font-display text-[19px] text-jnu-800;
+  }
+  .prose-jnu h3 {
+    @apply mb-2 mt-5 font-display text-[16px] text-jnu-800;
+  }
+  .prose-jnu ul {
+    @apply mb-4 list-disc space-y-1 pl-6;
+  }
+  .prose-jnu ol {
+    @apply mb-4 list-decimal space-y-1 pl-6;
+  }
+  .prose-jnu table {
+    @apply mb-5 w-full border-collapse text-[13px];
+  }
+  .prose-jnu th {
+    @apply border border-hair bg-shell px-3 py-2 text-left font-semibold text-jnu-800;
+  }
+  .prose-jnu td {
+    @apply border border-hair px-3 py-2 align-top;
+  }
+
+  /* Tabular figures wherever digits line up. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ---- marquee ticker (period-correct, but CSS not <marquee>) ----------- */
+@keyframes jnu-ticker {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.ticker-track {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: jnu-ticker 42s linear infinite;
+}
+.ticker-viewport:hover .ticker-track,
+.ticker-viewport:focus-within .ticker-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track {
+    animation: none;
+  }
+  .ticker-viewport {
+    overflow-x: auto;
+  }
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print: marksheets and verification results must print cleanly. */
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; font-size: 12px; }
+  .panel { border: 1px solid #000; box-shadow: none; }
+}
