@@ -253,6 +253,9 @@ university website" on every page.
 
 ## Deploy
 
+> Full step-by-step hosting + SEO checklist, including Search Console
+> and Rich Results verification: **[DEPLOY.md](DEPLOY.md)**
+
 Cloudflare Pages or Netlify: build `npm run build`, output directory `out`.
 Both free at this traffic level. Set `NEXT_PUBLIC_SITE_URL` to the real origin
 or the canonical URLs will be wrong.

@@ -14,6 +14,13 @@ import { pageMetadata } from '@/lib/seo'
  * ahead of this catch-all, so those are unaffected.
  */
 
+/**
+ * Set to true to surface maintainer TODO notes on the rendered pages — useful
+ * when working through the outstanding content, off for anything anyone else
+ * will look at.
+ */
+const SHOW_MAINTAINER_NOTES = process.env.NEXT_PUBLIC_SHOW_MAINTAINER_NOTES === 'true'
+
 function toParams(path: string) {
   return { slug: path.split('/').filter(Boolean) }
 }
@@ -107,10 +114,12 @@ function BlockView({ block }: { block: Block }) {
           </table>
         </div>
       )
-    case 'note':
-      // Advisory callout — either guidance for the reader (how to verify a
-      // recognition claim, how to pay safely) or a standing instruction to
-      // whoever maintains the site. Visible on purpose in both cases.
+    case 'note': {
+      // Reader-facing notes always render. Maintainer notes are build-time
+      // TODOs — they stay in the source so the outstanding work is tracked,
+      // but they must not show on a page someone is actually reading.
+      if (block.audience === 'maintainer' && !SHOW_MAINTAINER_NOTES) return null
+
       return (
         <aside className="my-5 rounded border border-hair border-l-[3px] border-l-sand-500 bg-white px-4 py-3">
           <p className="m-0 text-[13px] text-muted">
@@ -119,6 +128,7 @@ function BlockView({ block }: { block: Block }) {
           </p>
         </aside>
       )
+    }
   }
 }
 

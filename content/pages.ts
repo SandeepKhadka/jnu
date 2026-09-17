@@ -25,7 +25,11 @@ export type Block =
   | { type: 'ul'; items: string[] }
   | { type: 'ol'; items: string[] }
   | { type: 'table'; head: string[]; rows: string[][] }
-  | { type: 'note'; text: string }
+  // A note addressed to the reader (how to verify a recognition claim, how to
+  // pay safely) renders on the page. One marked `maintainer` is an instruction
+  // to whoever maintains the site and is hidden unless SHOW_MAINTAINER_NOTES is
+  // on — it stays in source so the outstanding work is still tracked.
+  | { type: 'note'; text: string; audience?: 'reader' | 'maintainer' }
 
 export type ContentPage = {
   path: string
@@ -88,7 +92,7 @@ export const contentPages: ContentPage[] = [
       { type: 'p', text: 'Second, an examination system whose results are declared on a published schedule and whose records are complete. A student is entitled to know when a result will appear and to obtain an accurate statement of marks without having to ask twice.' },
       { type: 'p', text: 'Third, verifiability. Every degree this university awards is entered in a register, and any employer or institution can check a certificate number against that register without needing an account or an introduction. Where a certificate has been withdrawn, the register says so plainly. We would rather report an uncomfortable fact than allow a document to pass as valid when it is not.' },
       { type: 'p', text: 'To students joining us: use the laboratories, ask your teachers difficult questions, and keep every receipt and document the university gives you. To parents: the fee schedule and the admission process are published on this site, and no payment should ever be made outside them.' },
-      { type: 'note', text: 'Attribution: this message is published on behalf of the office of the Chairperson. Replace with the current signed message and the Chairperson’s name and photograph before launch — a message must not appear under a named individual without their approval.' },
+      { type: 'note', audience: 'maintainer', text: 'Attribution: this message is published on behalf of the office of the Chairperson. Replace with the current signed message and the Chairperson’s name and photograph before launch — a message must not appear under a named individual without their approval.' },
     ],
   },
   {
@@ -127,7 +131,7 @@ export const contentPages: ContentPage[] = [
       { type: 'table', head: ['Position', 'Role on the Council'], rows: [['Vice-Chancellor', 'Chairperson'], ['Deans of the eight faculties', 'Members'], ['Heads of teaching departments', 'Members'], ['Controller of Examinations', 'Member'], ['External academic experts', 'Nominated members'], ['Registrar', 'Member Secretary']] },
       { type: 'h2', text: 'Meetings' },
       { type: 'p', text: 'The Council ordinarily meets twice in each academic year, before the start of the odd semester and after the declaration of even-semester results. Decisions affecting students — curriculum changes, examination policy, calendar revisions — are notified through the notices page.' },
-      { type: 'note', text: 'The current membership list, with names and designations, is to be supplied by the registrar. Do not publish individual names without confirmation.' },
+      { type: 'note', audience: 'maintainer', text: 'The current membership list, with names and designations, is to be supplied by the registrar. Do not publish individual names without confirmation.' },
     ],
   },
   {
@@ -165,7 +169,7 @@ export const contentPages: ContentPage[] = [
       { type: 'p', text: 'Students placed first in each programme at the end of an academic year are recognised at the annual function. The examination cell certifies the ranking from the declared results; rankings are not published before results are final.' },
       { type: 'h2', text: 'Adding an achievement' },
       { type: 'p', text: 'Students and alumni may submit an achievement for inclusion through the contact page, attaching documentary evidence. Submissions are verified by the department concerned before publication, and nothing is published without the individual’s written consent.' },
-      { type: 'note', text: 'Individual names, photographs and specific achievements are to be supplied by the departments with written consent on file. Named individuals must not be published without it.' },
+      { type: 'note', audience: 'maintainer', text: 'Individual names, photographs and specific achievements are to be supplied by the departments with written consent on file. Named individuals must not be published without it.' },
     ],
   },
   {
@@ -282,7 +286,7 @@ export const contentPages: ContentPage[] = [
       { type: 'h2', text: 'Grading' },
       { type: 'table', head: ['Marks (%)', 'Grade', 'Grade point'], rows: [['90 and above', 'A+', '10'], ['80 – 89', 'A', '9'], ['70 – 79', 'B+', '8'], ['60 – 69', 'B', '7'], ['50 – 59', 'C', '6'], ['40 – 49', 'D', '5'], ['Below 40', 'F', '0']] },
       { type: 'p', text: 'SGPA is the credit-weighted average of grade points for a semester; CGPA is the credit-weighted average across all semesters completed. A student carrying a failed paper is shown as ATKT and may carry it forward, subject to the limit set in the programme regulations.' },
-      { type: 'note', text: 'Upload the current syllabus PDFs per programme to /public/documents/ and list them here with their session and revision date. Where practical, publish the scheme of examination as an HTML table too — PDF-only content is largely invisible to search.' },
+      { type: 'note', audience: 'maintainer', text: 'Upload the current syllabus PDFs per programme to /public/documents/ and list them here with their session and revision date. Where practical, publish the scheme of examination as an HTML table too — PDF-only content is largely invisible to search.' },
     ],
   },
   {
@@ -302,7 +306,7 @@ export const contentPages: ContentPage[] = [
       { type: 'table', head: ['Form', 'Who submits it', 'Where'], rows: [['Application for a migration certificate', 'Students leaving or completing', 'Registrar'], ['Application for a bonafide certificate', 'Enrolled students', 'Registrar'], ['Application for withdrawal and fee refund', 'Students withdrawing', 'Registrar'], ['Change of address or contact details', 'Enrolled students', 'Registrar']] },
       { type: 'h2', text: 'Submitting a form' },
       { type: 'ol', items: ['Print the form single-sided and complete it in block letters in black ink.', 'Attach self-attested copies of the documents the form lists.', 'Submit at the office named above and obtain a dated, stamped receipt.', 'Keep the receipt — it is your only proof of submission.'] },
-      { type: 'note', text: 'Place the current PDFs in /public/documents/ and link them from the tables above, each with a revision date. Remove superseded versions rather than leaving them alongside current ones.' },
+      { type: 'note', audience: 'maintainer', text: 'Place the current PDFs in /public/documents/ and link them from the tables above, each with a revision date. Remove superseded versions rather than leaving them alongside current ones.' },
     ],
   },
 
@@ -388,7 +392,7 @@ export const contentPages: ContentPage[] = [
       { type: 'ol', items: ['Be seated fifteen minutes before the start of the paper.', 'Carry your admit card and student identity card to every paper. Entry is refused without them.', 'Only permitted materials may be taken into the hall. Mobile phones and smart watches are not permitted.', 'A candidate arriving more than thirty minutes late is not admitted.', 'No candidate may leave the hall within the first hour.', 'Write your roll number on the answer book only where indicated; do not write it elsewhere.'] },
       { type: 'h2', text: 'Class time table' },
       { type: 'p', text: 'Class time tables are issued by each department at the start of the semester and displayed on the departmental notice board. Any revision during the semester is notified by the department and on the notices page.' },
-      { type: 'note', text: 'The table above is an example structure for the project build. Replace it with the schedule issued by the examination cell for the current session, and link the signed PDF beside it.' },
+      { type: 'note', audience: 'maintainer', text: 'The table above is an example structure for the project build. Replace it with the schedule issued by the examination cell for the current session, and link the signed PDF beside it.' },
     ],
   },
   {
@@ -441,7 +445,7 @@ export const contentPages: ContentPage[] = [
       { type: 'table', head: ['Category', 'Contents', 'Issued by'], rows: [['Admission forms', 'Application form, category and gap declarations, hostel application', 'Administrative office'], ['Examination forms', 'Semester examination form, back-paper form, re-evaluation application, duplicate marksheet application', 'Examination cell'], ['Administrative forms', 'Bonafide, migration, withdrawal and refund, change of details', 'Registrar'], ['Syllabus', 'Programme-wise syllabus and scheme of examination, by session', 'Academic Council'], ['Time tables', 'Examination schedules and class time tables', 'Examination cell'], ['Fee schedule', 'Approved fee structure for the current session', 'Accounts']] },
       { type: 'h2', text: 'Before you submit anything' },
       { type: 'ul', items: ['Check the revision date on the form against the one listed here — an out-of-date form will be returned.', 'Print single-sided and complete in block letters in black ink.', 'Attach only self-attested copies; do not attach original certificates.', 'Obtain a dated, stamped receipt for every submission.'] },
-      { type: 'note', text: 'Place the current PDFs in /public/documents/ and link them from the table above with a revision date each. Where a document is a scanned image, also publish its content as HTML — a scanned PDF is unreadable to a screen reader and close to invisible to search.' },
+      { type: 'note', audience: 'maintainer', text: 'Place the current PDFs in /public/documents/ and link them from the table above with a revision date each. Where a document is a scanned image, also publish its content as HTML — a scanned PDF is unreadable to a screen reader and close to invisible to search.' },
     ],
   },
 
@@ -459,7 +463,7 @@ export const contentPages: ContentPage[] = [
       { type: 'table', head: ['Location', 'What to see'], rows: [['Main gate and approach', 'Entrance, security post and visitor parking'], ['Administrative block', 'Registrar’s office, accounts, admission counter'], ['Academic block', 'Lecture theatres, departmental offices, seminar rooms'], ['Engineering laboratories', 'Surveying, strength of materials, electrical machines, workshop'], ['Pharmacy laboratories', 'Pharmaceutics, chemistry and pharmacology laboratories'], ['Computing centre', 'Networked laboratories and project room'], ['Central library', 'Reading room, stacks and reference section'], ['Hostels', 'Separate blocks for men and women, and the mess'], ['Sports ground', 'Cricket and football ground, indoor games room'], ['Canteen and open areas', 'Student common spaces']] },
       { type: 'h2', text: 'Visiting in person' },
       { type: 'p', text: 'Prospective students and parents are welcome to visit the campus on working days between 10:00 and 16:00. A visit is worth making before you accept an offer anywhere: ask to see the laboratories for your programme, ask how many students share each workstation, and ask to meet a current student in the department. Arrange a visit through the contact page.' },
-      { type: 'note', text: 'Add campus photographs to /public/images/gallery/ as AVIF or WebP, each under about 150 KB, with descriptive alt text naming what is shown. The previous site served 2013-era JPEGs of up to 1.09 MB each, which was its single worst performance problem.' },
+      { type: 'note', audience: 'maintainer', text: 'Add campus photographs to /public/images/gallery/ as AVIF or WebP, each under about 150 KB, with descriptive alt text naming what is shown. The previous site served 2013-era JPEGs of up to 1.09 MB each, which was its single worst performance problem.' },
     ],
   },
   {
@@ -502,7 +506,7 @@ export const contentPages: ContentPage[] = [
       { type: 'p', text: 'You may ask what personal data the university holds about you, ask for an inaccuracy to be corrected, and ask for data to be erased where the university is not required to retain it. Academic records are retained permanently, since the university must be able to verify a degree it has awarded for the lifetime of the holder.' },
       { type: 'h2', text: 'Contact' },
       { type: 'p', text: 'Write to the registrar at the administrative office address on the contact page, marking your letter "Data protection". Requests are ordinarily answered within thirty days.' },
-      { type: 'note', text: 'Have this notice reviewed by the university’s legal adviser before launch, and add the named grievance officer and their contact details, which the DPDP Act requires.' },
+      { type: 'note', audience: 'maintainer', text: 'Have this notice reviewed by the university’s legal adviser before launch, and add the named grievance officer and their contact details, which the DPDP Act requires.' },
     ],
   },
 ]
