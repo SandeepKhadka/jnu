@@ -8,7 +8,6 @@ import {
   listCertificates,
   addCertificate,
   setCertificateStatus,
-  findCertificateById,
   nextCertificateNo,
   type CertificateRecord,
 } from '@/lib/store'
@@ -30,7 +29,7 @@ function emptyForm() {
     award_year: String(thisYear),
     enrollment_no: '',
     division: DIVISIONS[1],
-    certificate_no: nextCertificateNo(thisYear),
+    certificate_no: nextCertificateNo(thisYear, []),
     registrar_remarks: '',
   }
 }
@@ -72,7 +71,7 @@ export function CertificateRecords() {
   useEffect(() => {
     const year = Number(form.award_year)
     if (Number.isInteger(year) && year > 1949 && year <= thisYear) {
-      setForm((f) => ({ ...f, certificate_no: nextCertificateNo(year) }))
+      setForm((f) => ({ ...f, certificate_no: nextCertificateNo(year, rows) }))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.award_year, rows.length])
@@ -111,8 +110,7 @@ export function CertificateRecords() {
     }
 
     await load()
-    const created = await findCertificateById(res.id)
-    if (created) setPreview(created)
+    setPreview(res.record)
     setMsg({
       tone: 'ok',
       text: `${form.certificate_no} recorded and generated. It is now verifiable at /verify/.`,

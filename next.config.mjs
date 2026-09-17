@@ -1,14 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Static export: every public page is prerendered to plain HTML at build time.
-  // This is the core SEO decision — no server runtime, no DB query on page load.
-  output: 'export',
+  // NOT a static export any more: the app has API routes and a database, so
+  // it needs a Node runtime. Content pages are still prerendered at build
+  // time (SSG), so the SEO position is unchanged — only /api/* and the
+  // admin screens are dynamic.
+  //
+  // Deploy target is therefore Vercel or Render rather than a pure static
+  // host. See DEPLOY.md.
 
   // Emit /about/index.html rather than /about.html so the CDN serves clean URLs.
   trailingSlash: true,
 
-  // next/image optimisation needs a server, which a static export does not have.
-  // We ship pre-sized AVIF/WebP in /public instead — see README, "Images".
+  // Pre-sized AVIF/WebP are shipped in /public, so the optimiser is not needed.
   images: { unoptimized: true },
 
   // This folder sits under a parent directory that also has a lockfile;

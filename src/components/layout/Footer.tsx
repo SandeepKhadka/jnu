@@ -1,9 +1,9 @@
-import Link from 'next/link'
-import { site } from '@/content/site'
-import { quickLinks } from '@/content/nav'
+import Link from "next/link";
+import { site } from "@/content/site";
+import { quickLinks } from "@/content/nav";
 
 export function Footer() {
-  const year = new Date().getFullYear()
+  const year = new Date().getFullYear();
 
   return (
     <footer className="mt-10">
@@ -13,9 +13,13 @@ export function Footer() {
             <h2 className="mb-3 font-display text-[15px] uppercase tracking-wide text-white">
               {site.shortName}
             </h2>
-            <p className="m-0 text-[13px] leading-relaxed text-jnu-200">{site.tagline}</p>
+            <p className="m-0 text-[13px] leading-relaxed text-jnu-200">
+              {site.tagline}
+            </p>
             {site.recognition.ugcStatus ? (
-              <p className="mt-3 text-[13px] text-jnu-200">{site.recognition.ugcStatus}</p>
+              <p className="mt-3 text-[13px] text-jnu-200">
+                {site.recognition.ugcStatus}
+              </p>
             ) : null}
           </div>
 
@@ -26,7 +30,10 @@ export function Footer() {
             <ul className="m-0 list-none space-y-1.5 p-0 text-[13px]">
               {quickLinks.map((l) => (
                 <li key={l.href}>
-                  <Link href={l.href} className="text-jnu-100 no-underline hover:text-white hover:underline">
+                  <Link
+                    href={l.href}
+                    className="text-jnu-100 no-underline hover:text-white hover:underline"
+                  >
                     {l.label}
                   </Link>
                 </li>
@@ -72,16 +79,18 @@ export function Footer() {
         <div className="boxed flex flex-wrap items-center justify-between gap-2 py-3 text-xs">
           <p className="m-0">
             © {year} {site.legalName}. All rights reserved.
-            {/* Stated plainly, because certificates and results are generated here. */}
-            <span className="ml-2 text-jnu-300">
-              Academic demonstration project — not the official university website.
-            </span>
           </p>
           <nav aria-label="Legal" className="flex gap-4">
-            <Link href="/privacy/" className="text-jnu-200 no-underline hover:text-white hover:underline">
+            <Link
+              href="/privacy/"
+              className="text-jnu-200 no-underline hover:text-white hover:underline"
+            >
               Privacy
             </Link>
-            <Link href="/contact/" className="text-jnu-200 no-underline hover:text-white hover:underline">
+            <Link
+              href="/contact/"
+              className="text-jnu-200 no-underline hover:text-white hover:underline"
+            >
               Contact
             </Link>
             {/* Admin entry point lives on the public site, as requested. */}
@@ -96,5 +105,5 @@ export function Footer() {
         </div>
       </div>
     </footer>
-  )
+  );
 }

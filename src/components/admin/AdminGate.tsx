@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { getSession, signOut, getMode, storageAvailable, type Session } from '@/lib/store'
+import { getSession, signOut, type Session } from '@/lib/store'
 
 type Gate =
   | { kind: 'checking' }
@@ -13,23 +13,33 @@ type Gate =
 /**
  * Session gate for /admin.
  *
- * Honest about what this is: on a static site the gate cannot be enforced at
- * the edge, so it decides what the UI renders and nothing more. In local mode
- * that is the whole of it. With Supabase configured, Row Level Security is the
- * real boundary and this stays a convenience.
+ * This asks the server who is signed in — the session is an httpOnly cookie,
+ * so it cannot be answered in the browser. It decides what the UI renders,
+ * and it is no longer the only thing standing in the way: every protected API
+ * route calls requireStaff() and verifies the same cookie server-side, so
+ * bypassing this component gets you a page with no data in it.
  */
 export function AdminGate({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [gate, setGate] = useState<Gate>({ kind: 'checking' })
 
   useEffect(() => {
-    const session = getSession()
-    setGate(session ? { kind: 'ok', session } : { kind: 'anon' })
+    let cancelled = false
+
+    getSession().then((session) => {
+      if (cancelled) return
+      setGate(session ? { kind: 'ok', session } : { kind: 'anon' })
+    })
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   async function onSignOut() {
     await signOut()
     router.push('/')
+    router.refresh()
   }
 
   if (gate.kind === 'checking') {
@@ -69,53 +79,16 @@ export function AdminGate({ children }: { children: React.ReactNode }) {
         </button>
       </div>
 
-      <ModeBanner />
-      {children}
-    </div>
-  )
-}
-
-/** States the storage model plainly, so nobody is surprised by its limits. */
-function ModeBanner() {
-  const [noStorage, setNoStorage] = useState(false)
-  const mode = getMode()
-
-  useEffect(() => {
-    setNoStorage(!storageAvailable())
-  }, [])
-
-  if (noStorage) {
-    return (
-      <div className="mb-5 rounded border border-hair border-l-[3px] border-l-[#a8322b] bg-white px-4 py-3">
-        <p className="m-0 text-[13px] text-muted">
-          <strong className="text-[#a8322b]">Storage unavailable. </strong>
-          This browser is blocking site data (a private window, or blocked storage
-          settings), so changes made here cannot be saved. Seed data still displays, but
-          edits will be lost on reload.
-        </p>
-      </div>
-    )
-  }
-
-  if (mode === 'supabase') {
-    return (
       <div className="mb-5 rounded border border-hair border-l-[3px] border-l-[#2c6549] bg-white px-4 py-3">
         <p className="m-0 text-[13px] text-muted">
-          <strong className="text-[#2c6549]">Supabase mode. </strong>
-          Connected to a hosted database with server-side authentication.
+          <strong className="text-[#2c6549]">Database mode. </strong>
+          Results, certificates and this audit trail are stored server-side and read
+          through the API. Passwords are bcrypt-hashed and your session is an httpOnly
+          cookie, so changes here are visible on every device.
         </p>
       </div>
-    )
-  }
 
-  return (
-    <div className="mb-5 rounded border border-hair border-l-[3px] border-l-sand-500 bg-white px-4 py-3">
-      <p className="m-0 text-[13px] text-muted">
-        <strong className="text-jnu-800">Local demo mode. </strong>
-        Data comes from the seed file and your changes are saved in this browser
-        (localStorage), so the admin panel and the public pages stay in step on this
-        machine. Changes do not sync to other devices — configure Supabase for that.
-      </p>
+      {children}
     </div>
   )
 }

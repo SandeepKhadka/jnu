@@ -5,26 +5,39 @@
   "description": "Static, SEO-first university website with admin panel and results lookup",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "npx serve out",
+    "build": "prisma generate && next build",
+    "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:reset": "prisma migrate reset --force && npm run db:seed",
+    "db:studio": "prisma studio",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.3",
     "@supabase/supabase-js": "^2.45.4",
+    "bcryptjs": "^3.0.3",
+    "jose": "^6.2.12",
     "next": "^15.0.3",
+    "prisma": "^6.19.3",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.9.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.4.20",
+    "dotenv": "^17.4.2",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.0.3",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.15",
+    "tsx": "^4.23.13",
     "typescript": "^5.6.3"
   }
 }

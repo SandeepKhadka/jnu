@@ -1,43 +1,46 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { listAudit, resetDemoData, type AuditEntry } from '@/lib/store'
+import { listAudit, type AuditEntry } from '@/lib/store'
 
 /**
- * Append-only trail of every result and certificate change.
+ * Append-only trail of every result and certificate change, read from the
+ * database.
  *
- * Worth having even in a demo: results and certificate records are exactly the
- * data most worth tampering with, and "who changed this, and when" is the
- * first question anyone asks afterwards.
+ * Worth having even in a project: results and certificate records are exactly
+ * the data most worth tampering with, and "who changed this, and when" is the
+ * first question anyone asks afterwards. Entries are written server-side by
+ * the API routes, so they cannot be edited or cleared from the browser.
  */
 export function AuditLog() {
   const [rows, setRows] = useState<AuditEntry[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    setRows(listAudit())
-  }, [])
-
-  function onReset() {
-    if (
-      !window.confirm(
-        'Reset all demo data?\n\nThis clears every result, certificate and audit entry you have added and restores the original seed data. It cannot be undone.'
-      )
-    ) {
-      return
+    let cancelled = false
+    listAudit().then((entries) => {
+      if (cancelled) return
+      setRows(entries)
+      setLoading(false)
+    })
+    return () => {
+      cancelled = true
     }
-    resetDemoData()
-    window.location.reload()
-  }
+  }, [])
 
   return (
     <div className="space-y-6">
       <div className="panel">
         <h2 className="panel-head m-0 flex items-center justify-between">
           <span>Audit Log</span>
-          <span className="tnum text-[11px] font-normal text-muted">{rows.length} entries</span>
+          <span className="tnum text-[11px] font-normal text-muted">
+            {loading ? 'loading…' : `${rows.length} entries`}
+          </span>
         </h2>
         <div className="panel-body p-0">
-          {rows.length === 0 ? (
+          {loading ? (
+            <p className="m-0 px-4 py-6 text-[13px] text-muted">Loading…</p>
+          ) : rows.length === 0 ? (
             <p className="m-0 px-4 py-6 text-[13px] text-muted">
               No changes recorded yet. Add, publish or revoke something and it will appear
               here.
@@ -73,16 +76,20 @@ export function AuditLog() {
         </div>
       </div>
 
-      <div className="panel border-l-[3px] border-l-[#a8322b]">
-        <h2 className="panel-head m-0">Reset Demo Data</h2>
+      <div className="panel border-l-[3px] border-l-sand-500">
+        <h2 className="panel-head m-0">Resetting the demo data</h2>
         <div className="panel-body">
-          <p className="m-0 mb-3 text-[13px] text-muted">
-            Clears everything saved in this browser and restores the original seed data —
-            useful before demonstrating the project to someone.
+          <p className="m-0 mb-2 text-[13px] text-muted">
+            Data now lives in the database rather than the browser, so resetting is a
+            command rather than a button:
           </p>
-          <button type="button" onClick={onReset} className="btn btn-secondary">
-            Reset to seed data
-          </button>
+          <pre className="m-0 overflow-x-auto rounded border border-hair bg-shell p-3 text-[12px]">
+            npm run db:reset
+          </pre>
+          <p className="m-0 mt-2 text-[12px] text-muted">
+            That drops the database, re-applies the migrations and re-seeds it. Run it
+            before demonstrating the project to someone.
+          </p>
         </div>
       </div>
     </div>

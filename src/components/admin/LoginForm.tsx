@@ -2,17 +2,16 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { signIn, getMode } from '@/lib/store'
+import { signIn } from '@/lib/store'
 import { demoStaff } from '@/content/seed'
 
 /**
  * Staff login, served from the public site as requested.
  *
- * In local (zero-config) mode this checks the demo accounts in
- * content/seed.ts. Those credentials are in the bundle and readable — that is
- * fine for an academic project and stated plainly below, so nobody mistakes it
- * for real access control. Configuring Supabase replaces this path with real
- * server-side password hashing; see the README.
+ * The form posts to /api/auth/login. The password is compared against a bcrypt
+ * hash on the server and the hash never reaches the browser; on success the
+ * response sets an httpOnly session cookie that client-side JavaScript cannot
+ * read. There is no credential anywhere in this bundle to find in DevTools.
  */
 export function LoginForm() {
   const router = useRouter()
@@ -20,8 +19,6 @@ export function LoginForm() {
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  const mode = getMode()
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -35,7 +32,9 @@ export function LoginForm() {
       setError(res.error)
       return
     }
+
     router.push('/admin/')
+    router.refresh()
   }
 
   function fill(i: number) {
@@ -89,35 +88,32 @@ export function LoginForm() {
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
 
-        {mode === 'local' ? (
-          <div className="mt-5 rounded border border-hair border-l-[3px] border-l-sand-500 bg-shell p-3">
-            <p className="m-0 mb-2 text-[11px] font-semibold uppercase tracking-wide text-sand-600">
-              Demo accounts — academic project
-            </p>
-            <ul className="m-0 list-none space-y-1.5 p-0 text-[12.5px]">
-              {demoStaff.map((s, i) => (
-                <li key={s.email} className="flex flex-wrap items-baseline gap-2">
-                  <button
-                    type="button"
-                    onClick={() => fill(i)}
-                    className="tnum text-jnu-600 underline"
-                  >
-                    {s.email}
-                  </button>
-                  <span className="tnum text-muted">{s.password}</span>
-                  <span className="text-[11px] uppercase tracking-wide text-muted">
-                    {s.role.replace('_', ' ')}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <p className="m-0 mt-2.5 text-[11.5px] leading-relaxed text-muted">
-              These are checked in the browser, so they are not real access control —
-              acceptable for a project demo only. Configure Supabase for server-side
-              authentication before any live use.
-            </p>
-          </div>
-        ) : null}
+        <div className="mt-5 rounded border border-hair border-l-[3px] border-l-sand-500 bg-shell p-3">
+          <p className="m-0 mb-2 text-[11px] font-semibold uppercase tracking-wide text-sand-600">
+            Demo accounts — seeded in the database
+          </p>
+          <ul className="m-0 list-none space-y-1.5 p-0 text-[12.5px]">
+            {demoStaff.map((s, i) => (
+              <li key={s.email} className="flex flex-wrap items-baseline gap-2">
+                <button
+                  type="button"
+                  onClick={() => fill(i)}
+                  className="tnum text-jnu-600 underline"
+                >
+                  {s.email}
+                </button>
+                <span className="tnum text-muted">{s.password}</span>
+                <span className="text-[11px] uppercase tracking-wide text-muted">
+                  {s.role.replace('_', ' ')}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="m-0 mt-2.5 text-[11.5px] leading-relaxed text-muted">
+            Created by <code>npm run db:seed</code>. Only the bcrypt hash is stored, and
+            the comparison happens on the server. Change these before any live use.
+          </p>
+        </div>
       </div>
     </form>
   )

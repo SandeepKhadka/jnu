@@ -1,0 +1,106 @@
+// Jodhpur National University — database schema
+//
+// SQLite by default so the project clones and runs with no external service:
+//   npx prisma migrate dev  &&  npm run dev
+//
+// To host it (Vercel + a hosted Postgres such as Neon), change the provider
+// below to "postgresql" and point DATABASE_URL at the connection string.
+// Nothing else in the schema changes. See DEPLOY.md.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Staff accounts. Passwords are stored only as a bcrypt hash — never in
+/// plain text, and never sent back to the client.
+model Staff {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  /// registrar | exam_cell | editor
+  role         String   @default("editor")
+  createdAt    DateTime @default(now())
+
+  auditEntries AuditLog[]
+}
+
+/// One examination result for a student, in one semester, in one session.
+model Result {
+  id           String    @id @default(cuid())
+  rollNo       String
+  studentName  String
+  programme    String
+  semester     String
+  examSession  String
+  /// Subject rows as JSON — SQLite has no native JSON column type.
+  subjects     String    @default("[]")
+  marksObtained Int      @default(0)
+  marksMax     Int       @default(0)
+  sgpa         Float     @default(0)
+  /// PASS | FAIL | ATKT | WITHHELD
+  status       String    @default("PASS")
+  /// Nothing is visible to students until the exam cell publishes it.
+  published    Boolean   @default(false)
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // A student sits a given semester in a given session exactly once.
+  @@unique([rollNo, semester, examSession])
+  // The public lookup always filters on both columns.
+  @@index([rollNo, published])
+}
+
+/// Register of certificates the university has issued, backing public
+/// verification at /verify/.
+model Certificate {
+  id               String   @id @default(cuid())
+  certificateNo    String   @unique
+  studentName      String
+  programme        String
+  awardYear        Int
+  enrollmentNo     String
+  division         String
+  /// VERIFIED | REVOKED | WITHHELD
+  status           String   @default("VERIFIED")
+  registrarRemarks String?
+  issuedOn         DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([certificateNo])
+}
+
+/// Append-only trail. Results and certificates are the records most worth
+/// tampering with, so every write is logged with who did it.
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     Staff?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorEmail String
+  action    String
+  detail    String
+  at        DateTime @default(now())
+
+  @@index([at])
+}
+
+/// Contact-form submissions, routed to the relevant office.
+model Enquiry {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  programme String?
+  message   String
+  handled   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}

@@ -2,16 +2,17 @@
 
 import { useState } from 'react'
 import { site } from '@/content/site'
+import { submitEnquiry } from '@/lib/store'
 
 type State = 'idle' | 'sending' | 'sent' | 'error'
 
 /**
- * Enquiry capture. Writes to a Supabase `enquiries` table when configured;
- * otherwise falls back to a mailto link so the page is never a dead end.
+ * Enquiry capture. Posts to /api/enquiries, which validates the input and
+ * stores it in the database for staff to read.
  *
  * The honeypot is a deliberate choice over a CAPTCHA: no third-party script,
- * no cookie, nothing to slow the page down. Add Cloudflare Turnstile later if
- * spam volume warrants it.
+ * no cookie, nothing to slow the page down. It is checked on the server as
+ * well as here, since a bot can simply not run the client-side code.
  */
 export function EnquiryForm() {
   const [state, setState] = useState<State>('idle')
@@ -36,26 +37,18 @@ export function EnquiryForm() {
 
     setState('sending')
 
-    // Local mode: enquiries are queued in this browser. A real deployment
-    // points this at a Supabase table plus a transactional email send — see
-    // the README. Keeping it local means the form always works in the demo
-    // rather than dead-ending on a missing service.
-    try {
-      const key = 'jnu.enquiries.v1'
-      const existing = JSON.parse(window.localStorage.getItem(key) ?? '[]')
-      existing.unshift({
-        at: new Date().toISOString(),
-        name: form.name.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim() || null,
-        programme: form.programme.trim() || null,
-        message: form.message.trim(),
-      })
-      window.localStorage.setItem(key, JSON.stringify(existing.slice(0, 100)))
-      setState('sent')
-    } catch {
-      setState('error')
-    }
+    // Stored server-side in the enquiries table, readable by staff through
+    // /api/enquiries. The honeypot field is checked on the server too.
+    const res = await submitEnquiry({
+      name: form.name,
+      email: form.email,
+      phone: form.phone || undefined,
+      programme: form.programme || undefined,
+      message: form.message,
+      company: form.company || undefined,
+    })
+
+    setState(res.ok ? 'sent' : 'error')
   }
 
   if (state === 'sent') {
