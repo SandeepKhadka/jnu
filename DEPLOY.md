@@ -1,13 +1,56 @@
 # Hosting and SEO — step by step
 
-Written for the college project submission. Follow it in order; each SEO step
-produces a screenshot worth putting in your report.
+Written for the college project submission. Follow it in order; most SEO steps
+produce a screenshot worth putting in your report.
+
+The app has API routes and a database, so it needs a **Node runtime**. That
+rules out pure static hosts like Cloudflare Pages or GitHub Pages. Vercel is
+the path of least resistance for Next.js and is free at this size.
 
 ---
 
 ## Part 1 — Host it
 
-### 1.1 Push to GitHub
+### 1.1 Get a Postgres database (5 minutes, free)
+
+SQLite is a local file. Vercel's filesystem is ephemeral — anything written
+there disappears on the next request — so production needs a real database
+server.
+
+1. Sign up at <https://neon.com> (free, no card)
+2. Create a project; it hands you a connection string like
+   `postgresql://user:pass@ep-xxx.aws.neon.tech/neondb?sslmode=require`
+3. Copy it somewhere safe
+
+Supabase's free Postgres or Railway work equally well — you only need the
+connection string.
+
+### 1.2 Switch the schema to Postgres
+
+One line in `prisma/schema.prisma`:
+
+```prisma
+datasource db {
+  provider = "postgresql"   // was "sqlite"
+  url      = env("DATABASE_URL")
+}
+```
+
+Then regenerate the migration for the new dialect:
+
+```bash
+rm -rf prisma/migrations
+npx prisma migrate dev --name init
+```
+
+> Run this with `DATABASE_URL` already pointing at Neon (put it in
+> `.env.local`), otherwise Prisma generates SQLite-flavoured SQL that Postgres
+> will reject on deploy.
+
+Nothing else in the schema changes — the models, indexes and constraints are
+dialect-neutral.
+
+### 1.3 Push to GitHub
 
 ```bash
 git remote add origin https://github.com/<you>/jnu-website.git
@@ -15,210 +58,253 @@ git branch -M main
 git push -u origin main
 ```
 
-### 1.2 Deploy on Cloudflare Pages (free, no card needed)
+`.env.local` and `prisma/dev.db` are gitignored, so no secrets go up.
 
-1. Sign in at <https://dash.cloudflare.com> → **Workers & Pages** → **Create** →
-   **Pages** → **Connect to Git**
-2. Pick the repository
-3. Build settings:
+### 1.4 Deploy on Vercel
 
-   | Field | Value |
+1. <https://vercel.com> → **Add New** → **Project** → import the repository
+2. Framework preset: **Next.js** (detected automatically)
+3. Leave the build command alone — `package.json` already runs
+   `prisma generate && prisma migrate deploy && next build`, so migrations are
+   applied to the production database during the build
+4. Add three **Environment Variables**:
+
+   | Name | Value |
    | --- | --- |
-   | Framework preset | None |
-   | Build command | `npm run build` |
-   | Build output directory | `out` |
+   | `DATABASE_URL` | your Neon connection string |
+   | `AUTH_SECRET` | a long random string — generate it below |
+   | `NEXT_PUBLIC_SITE_URL` | `https://<your-project>.vercel.app` |
 
-4. **Environment variables** — add this one before the first build:
+   Generate the secret:
 
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
    ```
-   NEXT_PUBLIC_SITE_URL = https://<your-project>.pages.dev
-   ```
 
-5. **Save and Deploy.** First build takes 2–3 minutes.
+5. **Deploy**
 
-Netlify is identical: build `npm run build`, publish directory `out`.
+### 1.5 Seed the production database
 
-### 1.3 The one setting that breaks SEO if you skip it
+The deploy creates empty tables. Load the demo data once, from your machine,
+with `DATABASE_URL` pointing at Neon:
+
+```bash
+DATABASE_URL="postgresql://...your neon string..." npm run db:seed
+```
+
+On Windows PowerShell:
+
+```powershell
+$env:DATABASE_URL="postgresql://...your neon string..."; npm run db:seed
+```
+
+Then sign in at `https://<your-project>.vercel.app/admin/login/` and
+**change both demo passwords** before showing anyone the live URL.
+
+### 1.6 The setting that breaks SEO if you skip it
 
 `NEXT_PUBLIC_SITE_URL` must be your real deployed URL.
 
 Every `<link rel="canonical">`, every entry in `sitemap.xml` and every Open
-Graph tag is built from it. Leave it unset and it falls back to
-`https://jodhpurnationaluniversity.co.in` — meaning your site would tell Google
-*"the real version of this page is on someone else's domain, index that
+Graph tag is built from it. Unset, it falls back to
+`https://jodhpurnationaluniversity.co.in` — meaning your site tells Google
+*"the real version of this page lives on someone else's domain, index that
 instead."* Your pages would never rank.
 
-After deploying, confirm it took:
+Check it after deploying:
 
 ```bash
-curl -s https://<your-project>.pages.dev/ | grep -o 'rel="canonical" href="[^"]*"'
-# must print YOUR domain, not jodhpurnationaluniversity.co.in
+curl -s https://<your-project>.vercel.app/ | grep -o 'rel="canonical" href="[^"]*"'
+# must print YOUR domain
 ```
 
-### 1.4 About the domain
+### 1.7 About the domain
 
 `jodhpurnationaluniversity.co.in` belongs to the real institution — you cannot
-host there. You will be on a free subdomain like `jnu-project.pages.dev`, which
-is fine for a college project.
+host there. You will be on a free subdomain, which is fine for a college
+project.
 
 Do **not** try to outrank the real university for its own name. That is
-impersonation, and it competes with a live institution using its identity. The
-footer already carries *"Academic demonstration project — not the official
-university website"* on every page; leave it there.
+impersonation, and it competes with a live institution using its identity.
 
 ---
 
 ## Part 2 — SEO after hosting
 
 Your teacher cannot grade rankings — those take months. They grade **evidence
-that the SEO is correctly implemented.** Each step below gives you a
-screenshot.
+that the SEO is correctly implemented.**
 
-### 2.1 Google Search Console — the main one
+### 2.1 Google Search Console
 
-1. Go to <https://search.google.com/search-console>
+1. <https://search.google.com/search-console>
 2. **Add property** → **URL prefix** → paste your full URL
-3. Verify by **HTML tag**. Copy the `content="..."` value, then add it to
-   `src/app/layout.tsx` inside the `metadata` export:
+3. Verify by **HTML tag**. Copy the `content="..."` value into the `metadata`
+   export in `src/app/layout.tsx`:
 
    ```ts
    verification: { google: 'PASTE_THE_CONTENT_VALUE_HERE' },
    ```
 
-   Commit and push; Cloudflare rebuilds; click **Verify**.
-4. Left menu → **Sitemaps** → enter `sitemap.xml` → **Submit**
+   Commit, push, wait for the redeploy, then click **Verify**.
+4. **Sitemaps** → enter `sitemap.xml` → **Submit**
 5. Wait a day, then screenshot the page showing **36 discovered URLs**
 
-> 📸 **Screenshot 1:** Sitemaps page, status Success, 36 URLs
+> 📸 **Screenshot 1:** Sitemaps page, Success, 36 URLs
 
 ### 2.2 Rich Results Test — your strongest evidence
 
 <https://search.google.com/test/rich-results>
 
-Test these three URLs:
-
-| URL | What it should detect |
+| URL | Should detect |
 | --- | --- |
 | `/faculty/engineering-technology/` | **Course** ×5 + Breadcrumbs |
 | `/` | **FAQ** ×4 + Organization |
 | `/verify/` | **FAQ** ×4 + Breadcrumbs |
 
-Most student projects have zero structured data. This is the screenshot that
-separates yours.
+Most student projects have no structured data at all. This is the screenshot
+that separates yours.
 
-> 📸 **Screenshot 2:** Rich Results showing 5 valid Course items
+> 📸 **Screenshot 2:** 5 valid Course items
 
 ### 2.3 PageSpeed Insights
 
-<https://pagespeed.web.dev> — run it on your deployed home page.
+<https://pagespeed.web.dev> on your deployed home page. Screenshot mobile and
+desktop scores plus Core Web Vitals.
 
-A static export with one CSS bundle should score well. Screenshot both the
-mobile and desktop scores, and the Core Web Vitals panel.
-
-> 📸 **Screenshot 3:** Performance / Accessibility / Best Practices / SEO scores
-
-If Performance is lower than you want, the cause is almost certainly the hero
-image — see Part 3.
+> 📸 **Screenshot 3:** the four score rings
 
 ### 2.4 Bing Webmaster Tools
 
-<https://www.bing.com/webmasters> — sign in, **Import from Google Search
-Console** (one click), or add the site and submit the same `sitemap.xml`.
+<https://www.bing.com/webmasters> — **Import from Google Search Console** is
+one click, or add the site and submit the same sitemap.
 
-> 📸 **Screenshot 4:** Bing sitemap submitted
+> 📸 **Screenshot 4:** sitemap submitted
 
-### 2.5 Verify robots and sitemap by hand
-
-```bash
-curl https://<your-site>/robots.txt
-curl -s https://<your-site>/sitemap.xml | grep -c "<loc>"    # expect 36
-curl -s https://<your-site>/sitemap.xml | grep -cE "results|admin"   # expect 0
-```
-
-That last one matters: it proves student results are excluded from the index.
-
-### 2.6 Confirm the private pages really are noindex
+### 2.5 Prove the private pages are excluded
 
 ```bash
-curl -s https://<your-site>/results/    | grep -o 'name="robots" content="[^"]*"'
-# expect: noindex, nofollow, nocache
-curl -s https://<your-site>/verify/     | grep -o 'name="robots" content="[^"]*"'
-# expect: index, follow
+curl -s https://<your-site>/sitemap.xml | grep -c "<loc>"              # 36
+curl -s https://<your-site>/sitemap.xml | grep -cE "results|admin"     # 0
+curl -s https://<your-site>/results/ | grep -o 'name="robots" content="[^"]*"'
+# noindex, nofollow, nocache
+curl -s https://<your-site>/verify/  | grep -o 'name="robots" content="[^"]*"'
+# index, follow
 ```
+
+That second command is the one to explain: student results are deliberately
+kept out of the search index.
+
+### 2.6 Prove the API is actually protected
+
+Worth including in the report, since it shows the backend is real:
+
+```bash
+curl -i https://<your-site>/api/results/          # 401 Unauthorized
+curl -i https://<your-site>/api/audit/            # 401 Unauthorized
+curl -s "https://<your-site>/api/results/lookup/?roll=JNU2024BT0147"   # public, works
+curl -s "https://<your-site>/api/results/lookup/?roll=JNU2024BT0171"   # {"results":[]}
+```
+
+The last two together are the point: the same public endpoint returns a
+published result and returns nothing for an unpublished one.
 
 ---
 
 ## Part 3 — Still outstanding
 
-| Item | Why it matters | Who |
+| Item | Why | Who |
 | --- | --- | --- |
-| **Real campus photo** | Hero is a grey SVG placeholder. Export at 1600px wide, under ~150 KB, save as `public/images/campus-hero.jpg` and restore the `<source>` lines in `Hero.tsx` | You |
+| **Real campus photo** | Hero is a grey SVG placeholder. 1600px wide, under ~150 KB, save as `public/images/campus-hero.jpg` and restore the `<source>` lines in `Hero.tsx` | You |
 | **Certificate sample** | To restyle `CertificateTemplate.tsx` to match the real design | You → me |
-| **Gallery photos** | `/photo-tour/` describes the campus but has no images; drop them in `public/images/gallery/` | You |
-| Google verification tag | Section 2.1 above | You |
-
-Everything else is done.
+| **Gallery photos** | `/photo-tour/` describes the campus but shows nothing | You |
+| Google verification tag | §2.1 | You |
+| Change demo passwords | Before the live URL goes anywhere | You |
 
 ---
 
 ## Part 4 — For the viva
 
-The most interesting decision in the project, and the one to lead with:
+### The architecture point
 
-> **Public content is built into static HTML so search engines index it.
-> Private data is fetched in the browser and marked `noindex`.**
+> **Public content is prerendered into static HTML so search engines index it.
+> Private data goes through authenticated API routes and is marked `noindex`.**
 
-Concretely:
+- **Notices** live in `content/notices.ts` and are compiled into the HTML at
+  build time, so Google can read them. That is why the admin panel's Notices
+  tab generates a code snippet rather than writing to the database — a
+  browser-side fetch would be invisible to crawlers.
+- **Results** come from `/api/results/lookup`, and the page carries `noindex`,
+  is absent from `sitemap.xml` and is disallowed in `robots.txt`. Student marks
+  must never reach a search index — a DPDP Act 2023 issue, not a preference.
 
-- **Notices** are in `content/notices.ts` and compiled into the HTML at build
-  time. Google can read them. That is why the admin panel's Notices tab
-  generates a code snippet instead of writing to a database — a database fetch
-  in the browser would be invisible to crawlers, throwing away the SEO.
-- **Results** are fetched client-side and the page carries `noindex`, is absent
-  from `sitemap.xml`, and is disallowed in `robots.txt`. Student marks must
-  never reach a search index — that is a DPDP Act 2023 issue, not a preference.
+### The security point
 
-Second point worth making: **an unknown roll number and an unpublished one
-return the identical "Invalid roll number" message.** If they differed, anyone
-could enumerate which roll numbers are enrolled by trying values.
+Three things, in order of how much they matter:
 
-Third: the certificate generator **writes the register record before opening
-the print view**, so every document produced can be verified at `/verify/`. A
-certificate that cannot be checked is the problem the feature exists to avoid.
+1. **The filter is server-side.** `/api/results/lookup` applies
+   `published: true` in the database query and selects only display fields. An
+   unpublished result never reaches the browser. (Earlier in development the
+   whole dataset shipped to the client and the UI merely hid the drafts — worth
+   mentioning as the thing you fixed.)
+2. **Passwords are bcrypt hashes at cost 12.** The comparison happens on the
+   server; the hash never leaves it.
+3. **The session is a signed JWT in an httpOnly cookie.** Open DevTools on
+   `/admin/` and run `document.cookie` — the session is not there, so an XSS
+   bug cannot steal it.
 
-### Showing it live
+And the corollary: `AdminGate` decides what the UI renders, but it is *not* the
+boundary. Every protected route calls `requireStaff()`. Bypassing the component
+gets you an empty page.
 
-Reset to a clean state first: **Admin → Audit Log → Reset to seed data**.
+### Two design details worth mentioning
 
-Then the 60-second demo:
+- An unknown roll number and an unpublished one return the **identical**
+  message. If they differed, anyone could enumerate which roll numbers are
+  enrolled by trying values.
+- The certificate generator **writes the register row before rendering
+  anything printable**, so every document produced can be verified at
+  `/verify/`. A certificate that cannot be checked is the problem the feature
+  exists to prevent.
+
+### Live demo, in order
+
+Reset first: `npm run db:reset`
 
 1. `/results/` → `JNU2024BT0147` → full marksheet
-2. `/results/` → `JNU2024BT0171` → **Invalid roll number** (it exists, but is unpublished)
-3. `/verify/` → `JNU/DEG/2022/003310` → **Revoked**, with the registrar's reason
-4. `/admin/` → sign in → Certificates → generate one → Print
-5. Copy the new number → `/verify/` → it verifies
+2. `/results/` → `JNU2024BT0171` → **Invalid roll number** (it exists, unpublished)
+3. `/admin/` → sign in → publish that row → search again → it appears
+4. `/verify/` → `JNU/DEG/2022/003310` → **Revoked**, with the reason
+5. Admin → Certificates → generate one → Print
+6. Copy the new number → `/verify/` → it verifies
 
-Step 5 is the one that lands: the thing you just made is immediately checkable
-by a third party.
+Step 3 proves the admin panel and public site are one system. Step 6 proves
+generated documents are verifiable.
+
+**Have `npm run db:studio` open in another tab.** It is a GUI over the real
+tables — the fastest way to settle any question about whether there is a
+database.
 
 ---
 
 ## Local commands
 
 ```bash
-npm run dev      # development, http://localhost:3000
-npm run build    # static export to ./out
-npm start        # serve ./out to check the real output
+npm run dev         # development, http://localhost:3000
+npm run build       # production build (generates client, applies migrations)
+npm start           # run the production build locally
+
+npm run db:migrate  # create and apply a migration after a schema change
+npm run db:seed     # load demo data
+npm run db:reset    # drop, migrate, re-seed — run before demonstrating
+npm run db:studio   # visual database browser
 ```
 
-Stop any running server before `npm run build`, or it fails with `EPERM` /
-`ENOTEMPTY` — the dev server holds the `.next` and `out` folders on Windows.
+Stop any running server before `npm run build`, or it fails with `EPERM` on
+Windows — the dev server holds `.next`.
 
-To see the outstanding maintainer TODO notes on the rendered pages while you
-work through them:
+To surface the outstanding maintainer TODO notes on the rendered pages while
+working through them:
 
 ```bash
 NEXT_PUBLIC_SHOW_MAINTAINER_NOTES=true npm run dev
 ```
-
-They are hidden by default so nobody reading the site sees them.

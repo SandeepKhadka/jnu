@@ -5,7 +5,7 @@
   "description": "Static, SEO-first university website with admin panel and results lookup",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
@@ -17,7 +17,6 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
-    "@supabase/supabase-js": "^2.45.4",
     "bcryptjs": "^3.0.3",
     "jose": "^6.2.12",
     "next": "^15.0.3",
