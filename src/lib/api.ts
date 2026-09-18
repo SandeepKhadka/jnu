@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { UnauthorizedError } from '@/lib/auth'
+import { ForbiddenError, UnauthorizedError } from '@/lib/auth'
 import { StudentUnauthorizedError } from '@/lib/student-auth'
 
 /**
@@ -18,6 +18,7 @@ export function fail(message: string, status = 400) {
 export function handleError(e: unknown) {
   if (e instanceof UnauthorizedError) return fail('Not signed in.', 401)
   if (e instanceof StudentUnauthorizedError) return fail('Not signed in.', 401)
+  if (e instanceof ForbiddenError) return fail('Your role does not permit this action.', 403)
 
   // Prisma unique-constraint violation.
   if (typeof e === 'object' && e !== null && 'code' in e && (e as { code: string }).code === 'P2002') {

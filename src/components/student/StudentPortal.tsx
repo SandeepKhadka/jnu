@@ -6,10 +6,16 @@ import {
   getStudentPortal,
   studentSignIn,
   studentSignOut,
+  type CorrectionRequest,
   type ResultRecord,
   type StudentProfile,
 } from '@/lib/store'
 import { formatNoticeDate } from '@/content/notices'
+import {
+  announceStudentSessionChanged,
+  onStudentSessionChanged,
+} from '@/lib/student-session-events'
+import { ProfilePanel } from './ProfilePanel'
 
 /**
  * Student portal: sign in with roll number + date of birth, then see your own
@@ -26,17 +32,27 @@ import { formatNoticeDate } from '@/content/notices'
 export function StudentPortal() {
   const [profile, setProfile] = useState<StudentProfile | null>(null)
   const [results, setResults] = useState<ResultRecord[]>([])
+  const [corrections, setCorrections] = useState<CorrectionRequest[]>([])
   const [checking, setChecking] = useState(true)
 
   const refresh = useCallback(async () => {
     const data = await getStudentPortal()
     setProfile(data.student)
     setResults(data.results)
+    setCorrections(data.corrections)
     setChecking(false)
   }, [])
 
   useEffect(() => {
     void refresh()
+    // Signing out from the masthead menu must clear this screen too.
+    return onStudentSessionChanged(() => void refresh())
+  }, [refresh])
+
+  /** Sign-in: reload the record, and tell the masthead menu. */
+  const onSignedIn = useCallback(async () => {
+    await refresh()
+    announceStudentSessionChanged()
   }, [refresh])
 
   // While the session check is in flight, show the sign-in form rather than a
@@ -45,7 +61,7 @@ export function StudentPortal() {
   // arrive with a live session — and those few see the form for one round trip
   // instead, which is the cheaper mistake.
   if (!profile) {
-    return <SignInForm onSignedIn={refresh} busyCheck={checking} />
+    return <SignInForm onSignedIn={onSignedIn} busyCheck={checking} />
   }
 
   return (
@@ -61,13 +77,14 @@ export function StudentPortal() {
           onClick={async () => {
             await studentSignOut()
             await refresh()
+            announceStudentSessionChanged()
           }}
         >
           Sign out
         </button>
       </div>
 
-      <ProfileCard profile={profile} />
+      <ProfilePanel profile={profile} corrections={corrections} onChanged={refresh} />
 
       <h2 className="rule-heading mt-8">Examination Results</h2>
       {results.length === 0 ? (
@@ -169,48 +186,6 @@ function SignInForm({
         </p>
       </div>
     </form>
-  )
-}
-
-/* ------------------------------------------------------------- profile --- */
-
-function ProfileCard({ profile }: { profile: StudentProfile }) {
-  return (
-    <article className="panel">
-      <h2 className="panel-head m-0">Candidate Details</h2>
-      <div className="panel-body">
-        <div className="flex flex-wrap gap-6">
-          {/* Served from /api/uploads/<id>, which checks the session — the
-              photo is not a public file. next/image is not used because the
-              route is authenticated and returns private, no-store. */}
-          {profile.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={profile.photoUrl}
-              alt={`Photograph of ${profile.fullName}`}
-              width={112}
-              height={144}
-              className="h-[144px] w-[112px] shrink-0 rounded border border-hair object-cover"
-            />
-          ) : (
-            <div className="grid h-[144px] w-[112px] shrink-0 place-items-center rounded border border-dashed border-hair text-center text-[11px] text-muted">
-              No photograph on record
-            </div>
-          )}
-
-          <dl className="m-0 grid min-w-0 flex-1 gap-x-6 gap-y-2 text-[13.5px] sm:grid-cols-2">
-            <Row label="Roll Number" value={profile.rollNo} mono bold />
-            <Row label="Enrollment No." value={profile.enrollmentNo} mono bold />
-            <Row label="Candidate Name" value={profile.fullName} bold />
-            <Row label="Programme" value={profile.programme} />
-            <Row label="Father's Name" value={profile.fatherName} />
-            <Row label="Mother's Name" value={profile.motherName} />
-            <Row label="Date of Birth" value={formatNoticeDate(profile.dob)} mono />
-            <Row label="Status" value={profile.status} />
-          </dl>
-        </div>
-      </div>
-    </article>
   )
 }
 

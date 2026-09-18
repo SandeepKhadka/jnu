@@ -123,3 +123,25 @@ export async function audit(
     data: { actorId: user.id, actorEmail: user.email, action, detail },
   })
 }
+
+/**
+ * Guard for routes restricted to particular staff roles.
+ *
+ * Most staff routes only need `requireStaff()`. This exists for the few
+ * operations where the role genuinely matters — chiefly applying a correction
+ * to a student's name, parents' names or date of birth, which rewrites what
+ * certificate verification checks against. That is a registrar decision, not
+ * something an editor updating notices should be able to do.
+ */
+export async function requireRole(...roles: Role[]): Promise<SessionUser> {
+  const user = await requireStaff()
+  if (!roles.includes(user.role)) throw new ForbiddenError()
+  return user
+}
+
+export class ForbiddenError extends Error {
+  constructor() {
+    super('Forbidden')
+    this.name = 'ForbiddenError'
+  }
+}

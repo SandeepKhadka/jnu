@@ -5,12 +5,14 @@ import { ResultsManager } from './ResultsManager'
 import { CertificateRecords } from './CertificateRecords'
 import { NoticeHelper } from './NoticeHelper'
 import { AuditLog } from './AuditLog'
+import { ReviewQueue } from './ReviewQueue'
 
-type Tab = 'results' | 'certificates' | 'notices' | 'audit'
+type Tab = 'results' | 'certificates' | 'review' | 'notices' | 'audit'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'results', label: 'Examination Results' },
   { id: 'certificates', label: 'Certificates' },
+  { id: 'review', label: 'Student Requests' },
   { id: 'notices', label: 'Notices' },
   { id: 'audit', label: 'Audit Log' },
 ]
@@ -51,6 +53,7 @@ export function AdminTabs() {
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
         {tab === 'results' ? <ResultsManager /> : null}
         {tab === 'certificates' ? <CertificateRecords /> : null}
+        {tab === 'review' ? <ReviewQueue /> : null}
         {tab === 'notices' ? <NoticeHelper /> : null}
         {tab === 'audit' ? <AuditLog /> : null}
       </div>

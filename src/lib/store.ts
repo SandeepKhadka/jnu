@@ -372,12 +372,34 @@ export type StudentProfile = {
   dob: string
   programme: string
   photoUrl: string | null
+  /** A replacement photo the student uploaded that staff have not approved. */
+  pendingPhotoUrl: string | null
+  pendingPhotoAt: string | null
   status: string
+  mobile: string | null
+  email: string | null
+  addressLine: string | null
+  district: string | null
+  state: string | null
+  pincode: string | null
+}
+
+export type CorrectionStatus = 'PENDING' | 'RESOLVED' | 'REJECTED'
+
+export type CorrectionRequest = {
+  id: string
+  field: string
+  currentValue: string
+  requestedValue: string
+  status: CorrectionStatus
+  staffRemarks: string | null
+  createdAt: string
 }
 
 export type StudentPortal = {
   student: StudentProfile | null
   results: ResultRecord[]
+  corrections: CorrectionRequest[]
 }
 
 export async function studentSignIn(
@@ -401,14 +423,149 @@ export async function studentSignOut(): Promise<void> {
  * in the browser cannot fetch somebody else's marksheet.
  */
 export async function getStudentPortal(): Promise<StudentPortal> {
-  const res = await api<{ student: StudentProfile | null; results?: ApiResult[] }>(
-    '/api/student/me'
-  )
-  if (!res.ok || !res.data.student) return { student: null, results: [] }
+  const res = await api<{
+    student: StudentProfile | null
+    results?: ApiResult[]
+    corrections?: CorrectionRequest[]
+  }>('/api/student/me')
+  if (!res.ok || !res.data.student) return { student: null, results: [], corrections: [] }
   return {
     student: res.data.student,
     results: (res.data.results ?? []).map(toResult),
+    corrections: res.data.corrections ?? [],
   }
+}
+
+/**
+ * Just the signed-in student's name and roll number, or null.
+ *
+ * The header calls this on every page load, so it hits the lightweight
+ * /api/student/session rather than /api/student/me, which would also load the
+ * full profile and run the results query for every visitor on every page.
+ */
+export async function getStudentSessionSummary(): Promise<{
+  rollNo: string
+  fullName: string
+} | null> {
+  const res = await api<{ student: { rollNo: string; fullName: string } | null }>(
+    '/api/student/session'
+  )
+  return res.ok ? res.data.student : null
+}
+
+export type ContactDetails = {
+  mobile: string
+  email: string
+  addressLine: string
+  district: string
+  state: string
+  pincode: string
+}
+
+/**
+ * Updates the student's own contact details — the only fields they may change
+ * themselves. The server allow-lists these six and ignores anything else.
+ */
+export async function updateContactDetails(
+  input: ContactDetails
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await api('/api/student/me', { method: 'PATCH', body: JSON.stringify(input) })
+  return res.ok ? { ok: true } : res
+}
+
+/** Uploads a replacement photograph. It stays pending until staff approve it. */
+export async function uploadStudentPhoto(
+  file: File
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const form = new FormData()
+  form.append('photo', file)
+  try {
+    const res = await fetch('/api/student/photo/', {
+      method: 'POST',
+      body: form,
+      credentials: 'same-origin',
+      // No Content-Type: the browser must set it with the multipart boundary.
+    })
+    const body = await res.json().catch(() => null)
+    if (!res.ok) return { ok: false, error: body?.error ?? `Upload failed (${res.status}).` }
+    return { ok: true }
+  } catch {
+    return { ok: false, error: 'Could not reach the server. Check your connection.' }
+  }
+}
+
+/** Withdraws a pending photograph before staff have reviewed it. */
+export async function withdrawStudentPhoto(): Promise<void> {
+  await api('/api/student/photo', { method: 'DELETE' })
+}
+
+/** Asks the registrar to correct a field the student cannot edit themselves. */
+export async function requestCorrection(input: {
+  field: string
+  requestedValue: string
+  reason?: string
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await api('/api/student/corrections', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+  return res.ok ? { ok: true } : res
+}
+
+/* --------------------------------------------------------- staff review --- */
+
+export type PendingPhoto = {
+  studentId: string
+  rollNo: string
+  fullName: string
+  programme: string
+  currentPhotoUrl: string | null
+  pendingPhotoUrl: string
+  submittedAt: string | null
+}
+
+export type PendingCorrection = {
+  id: string
+  field: string
+  currentValue: string
+  requestedValue: string
+  reason: string | null
+  createdAt: string
+  rollNo: string
+  fullName: string
+}
+
+export async function getReviewQueue(): Promise<{
+  photos: PendingPhoto[]
+  corrections: PendingCorrection[]
+}> {
+  const res = await api<{ photos: PendingPhoto[]; corrections: PendingCorrection[] }>(
+    '/api/admin/review'
+  )
+  return res.ok ? res.data : { photos: [], corrections: [] }
+}
+
+export async function reviewPhoto(
+  studentId: string,
+  action: 'approve' | 'reject'
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await api(`/api/admin/photos/${studentId}`, {
+    method: 'POST',
+    body: JSON.stringify({ action }),
+  })
+  return res.ok ? { ok: true } : res
+}
+
+export async function resolveCorrection(
+  id: string,
+  action: 'apply' | 'reject',
+  remarks?: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await api(`/api/admin/corrections/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ action, remarks }),
+  })
+  return res.ok ? { ok: true } : res
 }
 
 /* --------------------------------------------------- certificate verify --- */

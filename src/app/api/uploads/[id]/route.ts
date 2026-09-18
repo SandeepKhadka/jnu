@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
  *
  *   - any signed-in member of staff, who processes applications and needs to
  *     see the Aadhaar and qualification documents attached to them;
- *   - a signed-in student, but ONLY for their own photograph.
+ *   - a signed-in student, but ONLY for their own photographs (live or pending).
  *
  * Anything else is a 404 rather than a 403: confirming that an id exists but
  * is forbidden would let someone probe for valid ids.
@@ -30,12 +30,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     if (!allowed) {
       const student = await getStudentSession()
       if (student) {
-        // A student may fetch exactly one file: the photo on their own record.
+        // A student may fetch only the photographs on their own record: the
+        // live one, and a replacement they have uploaded that is awaiting
+        // approval (so they can see what they sent).
         const own = await db.student.findUnique({
           where: { id: student.id },
-          select: { photoId: true },
+          select: { photoId: true, pendingPhotoId: true },
         })
-        allowed = own?.photoId === id
+        allowed = own?.photoId === id || own?.pendingPhotoId === id
       }
     }
 

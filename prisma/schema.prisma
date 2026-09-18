@@ -141,12 +141,39 @@ model Student {
   /// so and removes the whole class of bug.
   dob          String
   programme    String
-  /// Upload id for the passport photograph. Served only through an
+  /// Upload id for the live passport photograph. Served only through an
   /// authenticated route — never from /public.
   photoId      String?
-  photo        Upload? @relation(fields: [photoId], references: [id], onDelete: SetNull)
+  photo        Upload? @relation("StudentPhoto", fields: [photoId], references: [id], onDelete: SetNull)
+
+  /// A photograph the student has uploaded that staff have not approved yet.
+  ///
+  /// Held separately from photoId so the existing photo stays on the record
+  /// until someone approves the replacement. A student's own upload must not
+  /// appear unreviewed next to their marks on a page that looks like an
+  /// official university document.
+  pendingPhotoId String?
+  pendingPhoto   Upload?   @relation("StudentPendingPhoto", fields: [pendingPhotoId], references: [id], onDelete: SetNull)
+  pendingPhotoAt DateTime?
+
+  /// ---- Contact details ----
+  ///
+  /// The ONLY fields on this model a student may change themselves. Identity
+  /// fields above (name, parents, date of birth, roll and enrollment numbers)
+  /// are deliberately not editable: they are what certificate verification
+  /// checks against, so a self-service edit would let someone align their
+  /// record to a forged document and have the register confirm it. A date of
+  /// birth is also half the login credential. Corrections to those go through
+  /// CorrectionRequest and a member of staff.
+  mobile      String?
+  email       String?
+  addressLine String?
+  district    String?
+  state       String?
+  pincode     String?
+
   /// ACTIVE | GRADUATED | WITHDRAWN
-  status       String  @default("ACTIVE")
+  status String @default("ACTIVE")
 
   failedLogins Int       @default(0)
   lockedUntil  DateTime?
@@ -157,6 +184,7 @@ model Student {
 
   results      Result[]
   certificates Certificate[]
+  corrections  CorrectionRequest[]
 
   // Both halves of the login are matched together.
   @@index([rollNo, dob])
@@ -234,7 +262,8 @@ model Upload {
   kind        String
   createdAt   DateTime @default(now())
 
-  students                  Student[]
+  students                  Student[]     @relation("StudentPhoto")
+  pendingStudents           Student[]     @relation("StudentPendingPhoto")
   applicationPhotos         Application[] @relation("ApplicationPhoto")
   applicationAadhaars       Application[] @relation("ApplicationAadhaar")
   applicationQualifications Application[] @relation("ApplicationQualification")
@@ -257,4 +286,36 @@ model RateLimit {
 
   @@unique([bucket, key])
   @@index([windowStart])
+}
+
+/// A student's request to change a field they cannot edit themselves.
+///
+/// The safety valve for the read-only identity fields on Student. A student
+/// who spots their father's name misspelled needs a route to get it fixed;
+/// what they must not have is the ability to fix it unilaterally, because the
+/// same edit would let someone match their record to a forged certificate.
+/// So the request is recorded here and a member of staff applies it.
+model CorrectionRequest {
+  id        String  @id @default(cuid())
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  /// The Student field the request concerns, e.g. "fatherName".
+  field          String
+  /// Snapshot of the value at the time of asking, so staff can see whether the
+  /// record has already been changed by the time they look at it.
+  currentValue   String
+  requestedValue String
+  reason         String?
+
+  /// PENDING | RESOLVED | REJECTED
+  status       String    @default("PENDING")
+  staffRemarks String?
+  resolvedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([studentId])
 }

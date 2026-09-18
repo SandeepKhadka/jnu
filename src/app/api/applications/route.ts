@@ -4,7 +4,7 @@ import { requireStaff } from '@/lib/auth'
 import { clientIp, rateLimit } from '@/lib/ratelimit'
 import { normaliseDob } from '@/lib/student-auth'
 import { removeUpload, storeUpload, type UploadKind } from '@/lib/storage'
-import { INDIAN_STATES } from '@/content/india'
+import { isEmail, isIndianState, isPincode, normaliseMobile } from '@/lib/validate'
 import { allProgrammes } from '@/content/programmes'
 
 export const dynamic = 'force-dynamic'
@@ -119,17 +119,14 @@ export async function POST(req: Request) {
     if (!dob) reject('Enter a valid date of birth.')
 
     const email = text('email')
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) reject('Enter a valid email address.')
+    if (!isEmail(email)) reject('Enter a valid email address.')
 
-    // Indian mobile numbers are ten digits beginning 6-9; tolerate a +91 or 0
-    // prefix and any spacing the applicant typed.
-    const mobile = text('mobile').replace(/[\s-]/g, '').replace(/^(\+91|0)/, '')
-    if (!/^[6-9]\d{9}$/.test(mobile)) reject('Enter a valid 10-digit mobile number.')
+    const mobile = normaliseMobile(text('mobile')) ?? reject('Enter a valid 10-digit mobile number.')
 
     const pincode = text('pincode')
-    if (!/^[1-9]\d{5}$/.test(pincode)) reject('Enter a valid 6-digit PIN code.')
+    if (!isPincode(pincode)) reject('Enter a valid 6-digit PIN code.')
 
-    if (!INDIAN_STATES.includes(text('state'))) reject('Select a state or union territory.')
+    if (!isIndianState(text('state'))) reject('Select a state or union territory.')
 
     const programme = text('programme')
     if (!allProgrammes.some((p) => p.name === programme)) {
