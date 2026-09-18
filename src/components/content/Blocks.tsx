@@ -1,4 +1,4 @@
-import type { Block } from '@/content/pages'
+import type { Block } from '@/lib/content-types'
 
 /**
  * Renders the typed content blocks from content/pages.ts.

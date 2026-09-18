@@ -3,8 +3,7 @@
 import { useRef, useState } from 'react'
 
 import { INDIAN_STATES, RAJASTHAN_DISTRICTS } from '@/content/india'
-import { faculties } from '@/content/programmes'
-import { site } from '@/content/site'
+import { useSite } from '@/components/site/SiteProvider'
 import { submitApplication } from '@/lib/store'
 
 /**
@@ -29,7 +28,10 @@ type Status =
   | { kind: 'done'; applicationNo: string | null }
   | { kind: 'error'; message: string }
 
-export function AdmissionForm() {
+export type ProgrammeOption = { faculty: string; programmes: { name: string; award: string }[] }
+
+export function AdmissionForm({ programmes }: { programmes: ProgrammeOption[] }) {
+  const { site } = useSite()
   const formRef = useRef<HTMLFormElement>(null)
   const [status, setStatus] = useState<Status>({ kind: 'editing' })
   const [state, setState] = useState('Rajasthan')
@@ -219,12 +221,10 @@ export function AdmissionForm() {
               <option value="" disabled>
                 Select a programme…
               </option>
-              {faculties
-                .filter((f) => f.programmes.length > 0)
-                .map((f) => (
-                  <optgroup key={f.slug} label={f.name}>
+              {programmes.map((f) => (
+                  <optgroup key={f.faculty} label={f.faculty}>
                     {f.programmes.map((p) => (
-                      <option key={p.slug} value={p.name}>
+                      <option key={p.name} value={p.name}>
                         {p.name} ({p.award})
                       </option>
                     ))}

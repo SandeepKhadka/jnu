@@ -1,5 +1,6 @@
 import { ok, fail, handleError } from '@/lib/api'
 import { getSessionUser } from '@/lib/auth'
+import { can } from '@/lib/permissions'
 import { getStudentSession } from '@/lib/student-auth'
 import { db } from '@/lib/db'
 import { etagFor, readUpload } from '@/lib/storage'
@@ -12,8 +13,8 @@ export const dynamic = 'force-dynamic'
  * This route is the only way bytes leave the upload store, which is why the
  * store sits outside public/. Two callers are allowed:
  *
- *   - any signed-in member of staff, who processes applications and needs to
- *     see the Aadhaar and qualification documents attached to them;
+ *   - staff who handle admissions or student records (never a content
+ *     editor), who need the Aadhaar and qualification documents;
  *   - a signed-in student, but ONLY for their own photographs (live or pending).
  *
  * Anything else is a 404 rather than a 403: confirming that an id exists but
@@ -24,8 +25,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const { id } = await params
     if (!id || id.length > 40) return fail('Not found.', 404)
 
+    // Staff who handle admissions or student records — NOT content editors:
+    // these files include Aadhaar scans.
     const staff = await getSessionUser()
-    let allowed = Boolean(staff)
+    let allowed = Boolean(
+      staff && !staff.mustChangePassword &&
+        (can(staff.role, 'applications.manage') || can(staff.role, 'students.view'))
+    )
 
     if (!allowed) {
       const student = await getStudentSession()

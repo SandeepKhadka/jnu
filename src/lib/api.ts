@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
-import { ForbiddenError, UnauthorizedError } from '@/lib/auth'
+import { ForbiddenError, PasswordChangeRequiredError, UnauthorizedError } from '@/lib/auth'
 import { StudentUnauthorizedError } from '@/lib/student-auth'
+import { InputError } from '@/lib/admin-route'
 
 /**
  * Shared response helpers so every route reports errors the same way and a
@@ -16,9 +17,13 @@ export function fail(message: string, status = 400) {
 }
 
 export function handleError(e: unknown) {
+  if (e instanceof InputError) return fail(e.message, 400)
   if (e instanceof UnauthorizedError) return fail('Not signed in.', 401)
   if (e instanceof StudentUnauthorizedError) return fail('Not signed in.', 401)
   if (e instanceof ForbiddenError) return fail('Your role does not permit this action.', 403)
+  if (e instanceof PasswordChangeRequiredError) {
+    return fail('Set a new password before continuing.', 403)
+  }
 
   // Prisma unique-constraint violation.
   if (typeof e === 'object' && e !== null && 'code' in e && (e as { code: string }).code === 'P2002') {

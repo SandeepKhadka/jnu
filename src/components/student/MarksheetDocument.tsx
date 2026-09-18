@@ -3,7 +3,8 @@
 import QRCode from 'qrcode'
 import { useEffect, useState } from 'react'
 
-import { site } from '@/content/site'
+import { useSite } from '@/components/site/SiteProvider'
+import { SITE_URL, SITE_HOST } from '@/lib/site-url'
 import {
   divisionFor,
   dottedDate,
@@ -22,7 +23,7 @@ import { cinzel, garamond } from './marksheet-fonts'
  * Controller's signature. Everything identifying is JNU's own — none of the
  * sample institution's name, registration numbers or recognition claims are
  * reproduced, and no recognition line is printed at all until
- * site.recognition is populated from registrar-supplied evidence.
+ * the registrar records a recognition statement WITH its evidence.
  *
  * Security features, because a statement of marks is worth forging:
  *   - Serial + QR code resolving to /verify/marksheet/, which returns the
@@ -33,17 +34,25 @@ import { cinzel, garamond } from './marksheet-fonts'
  *     at full resolution.
  *
  * Deliberately NOT here: a signature, unless the examination cell supplies
- * the real scan (site.examinations.signatureImage). See the note there.
+ * the real scan (Admin → Examinations). See signatureUrl below.
  */
 export function MarksheetDocument({
   row,
   profile,
+  signatureUrl = null,
 }: {
   row: ResultRecord
   profile: StudentProfile
+  /**
+   * The Controller's scanned signature, if the examination cell has set one.
+   * Passed in from /api/student/me rather than read from site settings, so
+   * it is only ever sent to a signed-in student printing their own sheet.
+   */
+  signatureUrl?: string | null
 }) {
+  const { site, examinations, recognition, branding } = useSite()
   const verifyUrl = row.serial
-    ? `${site.url.replace(/\/$/, '')}/verify/marksheet/?sn=${encodeURIComponent(row.serial)}`
+    ? `${SITE_URL}/verify/marksheet/?sn=${encodeURIComponent(row.serial)}`
     : null
 
   const [qrSvg, setQrSvg] = useState<string | null>(null)
@@ -69,10 +78,10 @@ export function MarksheetDocument({
   const subjects = Array.isArray(row.subjects) ? row.subjects : []
   const pct = percentageOf(row.marks_obtained, row.marks_max)
   const division = divisionFor(row.status, pct)
-  const host = site.url.replace(/^https?:\/\//, '').replace(/\/$/, '')
-  const recognitionLine = [site.recognition.ugcStatus, ...site.recognition.approvals]
-    .filter(Boolean)
-    .join(' • ')
+  const host = SITE_HOST.replace(/\/$/, '')
+  const recognitionLine = recognition.evidence
+    ? [recognition.ugcStatus, ...recognition.approvals].filter(Boolean).join(' • ')
+    : ''
 
   const resultTone =
     row.status === 'PASS' ? '#1f7a3a' : row.status === 'ATKT' ? '#9a6a10' : '#a8322b'
@@ -84,12 +93,12 @@ export function MarksheetDocument({
           {/* ---- security layers (in flow, so they print) ---- */}
           <Microprint text={site.name} />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/brand/jnu-crest.png" alt="" aria-hidden="true" className="ms-crest-ghost" />
+          <img src={branding.crest} alt="" aria-hidden="true" className="ms-crest-ghost" />
 
           {/* ---- header ---- */}
           <header className="ms-head">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/brand/jnu-crest.png" alt={`${site.name} crest`} className="ms-crest" />
+            <img src={branding.crest} alt={`${site.name} crest`} className="ms-crest" />
 
             <div className="ms-title-block">
               <p className="ms-web">www.{host.replace(/^www\./, '')}</p>
@@ -147,7 +156,7 @@ export function MarksheetDocument({
               <Field label="Father's Name" value={profile.fatherName} />
               <Field label="Year / Semester" value={row.semester} />
               <Field label="Mother's Name" value={profile.motherName} />
-              <Field label="Centre Name" value={site.examinations.centre} />
+              <Field label="Centre Name" value={examinations.centre} />
               <Field label="Date of Birth" value={sheetDate(profile.dob)} />
             </dl>
 
@@ -226,7 +235,7 @@ export function MarksheetDocument({
           {/* ---- footer ---- */}
           <footer className="ms-foot">
             <div className="ms-place-date">
-              <p>{site.examinations.place}</p>
+              <p>{examinations.place}</p>
               <p>
                 Dated: <b>{row.published_at ? dottedDate(row.published_at) : '—'}</b>
               </p>
@@ -236,13 +245,13 @@ export function MarksheetDocument({
 
             <div className="ms-sign">
               <div className="ms-sign-space">
-                {site.examinations.signatureImage ? (
+                {signatureUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={site.examinations.signatureImage} alt="Signature" />
+                  <img src={signatureUrl} alt="Signature" />
                 ) : null}
               </div>
               <p className={`ms-sign-title ${cinzel.className}`}>
-                {site.examinations.controllerTitle}
+                {examinations.controllerTitle}
               </p>
               <p className="ms-sign-uni">{site.name}</p>
             </div>
@@ -685,6 +694,7 @@ function Microprint({ text }: { text: string }) {
 
 /** Embossed-style round seal, drawn in SVG so it prints crisp at any DPI. */
 function Seal() {
+  const { site } = useSite()
   const ring = `${site.name.toUpperCase()} • EXAMINATION CELL • `
   return (
     <svg

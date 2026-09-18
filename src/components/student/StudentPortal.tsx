@@ -10,7 +10,7 @@ import {
   type ResultRecord,
   type StudentProfile,
 } from '@/lib/store'
-import { formatNoticeDate } from '@/content/notices'
+import { formatNoticeDate } from '@/lib/content-types'
 import {
   announceStudentSessionChanged,
   onStudentSessionChanged,

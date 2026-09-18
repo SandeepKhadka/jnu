@@ -66,11 +66,13 @@ export type CertificateRecord = {
   serial?: string | null
 }
 
+import type { Role } from '@/lib/permissions'
+
 export type Session = {
   id: string
   email: string
   full_name: string
-  role: 'registrar' | 'exam_cell' | 'editor'
+  role: Role
 }
 
 export type AuditEntry = {
@@ -388,7 +390,7 @@ export async function signOut(): Promise<void> {
  * so this cannot be answered locally — which is the point.
  */
 export async function getSession(): Promise<Session | null> {
-  const res = await api<{ user: { id: string; email: string; fullName: string; role: Session['role'] } | null }>(
+  const res = await api<{ user: { id: string; email: string; fullName: string; role: Role } | null }>(
     '/api/auth/me'
   )
   if (!res.ok || !res.data.user) return null

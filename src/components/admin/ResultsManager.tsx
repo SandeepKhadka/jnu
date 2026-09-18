@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { allProgrammes } from '@/content/programmes'
+import { getJson } from '@/lib/admin-client'
 import {
   listResults,
   addResult,
@@ -10,7 +10,7 @@ import {
   importResults,
   type ResultRecord,
 } from '@/lib/store'
-import type { Subject } from '@/content/seed'
+import type { Subject } from '@/lib/store'
 
 const SEMESTERS = [
   'Semester I', 'Semester II', 'Semester III', 'Semester IV',
@@ -21,7 +21,7 @@ function emptyForm() {
   return {
     roll_no: '',
     student_name: '',
-    programme: allProgrammes[0]?.name ?? '',
+    programme: '',
     semester: 'Semester IV',
     exam_session: 'Even 2025-26',
     status: 'PASS' as ResultRecord['status'],
@@ -39,6 +39,15 @@ function emptyForm() {
  * deliberately two separate actions so a bad import can be corrected first.
  */
 export function ResultsManager() {
+  // Programme names come from Faculties & programmes; this screen only reads
+  // them, so it uses the lightweight endpoint rather than the catalogue API.
+  const [programmeNames, setProgrammeNames] = useState<string[]>([])
+  useEffect(() => {
+    void getJson<{ faculties: { programmes: string[] }[] }>('/api/admin/programme-names').then((res) => {
+      if (res.ok) setProgrammeNames(res.data.faculties.flatMap((f) => f.programmes))
+    })
+  }, [])
+
   const [rows, setRows] = useState<ResultRecord[]>([])
   const [form, setForm] = useState(emptyForm)
   const [busy, setBusy] = useState(false)
@@ -223,7 +232,7 @@ export function ResultsManager() {
             <Text id="roll_no" label="Roll Number" value={form.roll_no} onChange={(v) => setForm({ ...form, roll_no: v })} placeholder="JNU2024BT0190" />
             <Text id="student_name" label="Student Name" value={form.student_name} onChange={(v) => setForm({ ...form, student_name: v })} />
 
-            <Select id="programme" label="Programme" value={form.programme} onChange={(v) => setForm({ ...form, programme: v })} options={allProgrammes.map((p) => p.name)} />
+            <Select id="programme" label="Programme" value={form.programme} onChange={(v) => setForm({ ...form, programme: v })} options={programmeNames} />
             <Select id="semester" label="Semester" value={form.semester} onChange={(v) => setForm({ ...form, semester: v })} options={SEMESTERS} />
 
             <Text id="exam_session" label="Exam Session" value={form.exam_session} onChange={(v) => setForm({ ...form, exam_session: v })} placeholder="Even 2025-26" />

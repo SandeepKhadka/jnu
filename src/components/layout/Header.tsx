@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { site } from '@/content/site'
+import { getBranding, getResolvedMenu, getSite } from '@/lib/content'
 import { LoginMenu } from './LoginMenu'
 import { MainNav } from './MainNav'
 
@@ -7,7 +7,9 @@ import { MainNav } from './MainNav'
  * Top utility bar + masthead + nav — the standard institutional header
  * arrangement of the period.
  */
-export function Header() {
+export async function Header() {
+  const [site, branding, menu] = await Promise.all([getSite(), getBranding(), getResolvedMenu()])
+
   return (
     <header>
       {/* ---- utility bar ---- */}
@@ -58,11 +60,12 @@ export function Header() {
             */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/images/brand/jnu-logo-lockup.png"
-              srcSet="/images/brand/jnu-logo-lockup.png 1x, /images/brand/jnu-logo-lockup@2x.png 2x"
+              src={branding.logo.src}
+              srcSet={branding.logo.srcSet}
+              sizes="(min-width: 640px) 230px, 200px"
               alt={site.name}
-              width={228}
-              height={56}
+              width={branding.logo.width}
+              height={branding.logo.height}
               className="h-12 w-auto sm:h-14"
             />
           </Link>
@@ -79,7 +82,7 @@ export function Header() {
         </div>
       </div>
 
-      <MainNav />
+      <MainNav items={menu} />
     </header>
   )
 }

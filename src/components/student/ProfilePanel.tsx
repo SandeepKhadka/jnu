@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 
 import { INDIAN_STATES } from '@/content/india'
-import { formatNoticeDate } from '@/content/notices'
+import { formatNoticeDate } from '@/lib/content-types'
 import { CORRECTABLE_FIELDS, type CorrectableField } from '@/lib/corrections'
 import {
   requestCorrection,

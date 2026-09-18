@@ -1,6 +1,7 @@
 import { db } from '@/lib/db'
 import { ok, handleError } from '@/lib/api'
 import { requireStaff } from '@/lib/auth'
+import { requireAny } from '@/lib/admin-route'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,7 +11,7 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET() {
   try {
-    await requireStaff()
+    await requireAny('reviews.photos', 'reviews.corrections')
 
     const [photos, corrections] = await Promise.all([
       db.student.findMany({

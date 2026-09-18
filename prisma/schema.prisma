@@ -23,9 +23,15 @@ model Staff {
   email        String   @unique
   passwordHash String
   fullName     String
-  /// registrar | exam_cell | editor
+  /// admin | registrar | exam_cell | editor — see src/lib/permissions.ts
   role         String   @default("editor")
   createdAt    DateTime @default(now())
+
+  /// Forces a password change at next sign-in: set when an admin creates the
+  /// account or resets the password, so the temporary one is used only once.
+  mustChangePassword Boolean   @default(false)
+  disabled           Boolean   @default(false)
+  lastLoginAt        DateTime?
 
   auditEntries AuditLog[]
 }
@@ -331,4 +337,163 @@ model CorrectionRequest {
 
   @@index([status, createdAt])
   @@index([studentId])
+}
+
+// ===========================================================================
+// CONTENT MANAGEMENT
+//
+// Everything the public site shows that an administrator can change lives in
+// the tables below. Public pages are still prerendered to static HTML — they
+// read these tables at build time and are regenerated on demand when an admin
+// saves (src/lib/content.ts, src/lib/revalidate.ts), so search engines always
+// receive complete HTML and editors never wait for a redeploy.
+// ===========================================================================
+
+/// Site-wide settings, one JSON document per key: site, branding, home, menu,
+/// footerLinks, recognition, examinations, certificateLayout. Shapes and
+/// defaults are in src/lib/content-types.ts; every write is validated there.
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
+
+/// A public file an administrator uploaded (logo, banner, photograph, PDF).
+///
+/// Distinct from Upload, which holds private documents (Aadhaar scans). Media
+/// is served to everyone at /media/... with long-lived caching; Upload never
+/// is. Keeping them in separate tables means a bug in one can never publish
+/// the other.
+///
+/// storage "static": files shipped in public/ (the initial content).
+/// storage "local":  files written by the admin panel to MEDIA_DIR.
+model Media {
+  id          String   @id @default(cuid())
+  storage     String   @default("local")
+  /// IMAGE | DOCUMENT
+  kind        String
+  filename    String
+  contentType String
+  bytes       Int
+  width       Int?
+  height      Int?
+  /// Default alt text; slides and gallery photos carry their own.
+  alt         String   @default("")
+  /// JSON: [{ w, format, path }] — the encoded variants, for srcset.
+  variants    String   @default("[]")
+  /// For a document: its public path.
+  path        String?
+  createdBy   String?
+  createdAt   DateTime @default(now())
+
+  slides        Slide[]
+  galleryPhotos GalleryPhoto[]
+  notices       Notice[]
+}
+
+model Faculty {
+  id         String      @id @default(cuid())
+  slug       String      @unique
+  name       String
+  summary    String
+  sortOrder  Int         @default(0)
+  published  Boolean     @default(true)
+  programmes Programme[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model Programme {
+  id             String   @id @default(cuid())
+  slug           String
+  name           String
+  award          String
+  durationMonths Int
+  /// Full-time | Part-time | Distance
+  mode           String   @default("Full-time")
+  eligibility    String
+  intake         Int?
+  sortOrder      Int      @default(0)
+  published      Boolean  @default(true)
+  facultyId      String
+  faculty        Faculty  @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([facultyId, slug])
+  @@index([facultyId, sortOrder])
+}
+
+/// A content page rendered at `path` by the [...slug] route.
+model Page {
+  id          String   @id @default(cuid())
+  /// Always with leading and trailing slash: /about/foundation/
+  path        String   @unique
+  title       String
+  description String
+  intro       String?
+  /// JSON Block[] — typed blocks, never raw HTML, so an editor cannot inject
+  /// script into the public site.
+  body        String   @default("[]")
+  /// JSON Crumb[] (excluding Home).
+  crumbs      String   @default("[]")
+  published   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Notice {
+  id        String   @id @default(cuid())
+  /// YYYY-MM-DD
+  date      String
+  title     String
+  /// Examination | Admission | General | Placement | Result
+  category  String   @default("General")
+  href      String?
+  fileId    String?
+  file      Media?   @relation(fields: [fileId], references: [id], onDelete: SetNull)
+  pinned    Boolean  @default(false)
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([published, date])
+}
+
+/// Homepage carousel slide.
+model Slide {
+  id               String   @id @default(cuid())
+  mediaId          String
+  media            Media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  alt              String
+  /// Text artwork: shown whole on this background, caption steps aside.
+  banner           Boolean  @default(false)
+  bannerBackground String?
+  sortOrder        Int      @default(0)
+  enabled          Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model GalleryCategory {
+  id        String         @id @default(cuid())
+  slug      String         @unique
+  title     String
+  blurb     String         @default("")
+  sortOrder Int            @default(0)
+  photos    GalleryPhoto[]
+}
+
+model GalleryPhoto {
+  id         String          @id @default(cuid())
+  mediaId    String
+  media      Media           @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   GalleryCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  alt        String
+  caption    String
+  sortOrder  Int             @default(0)
+  published  Boolean         @default(true)
+  createdAt  DateTime        @default(now())
 }

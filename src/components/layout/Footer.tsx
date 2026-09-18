@@ -1,9 +1,13 @@
 import Link from "next/link";
-import { site } from "@/content/site";
-import { quickLinks } from "@/content/nav";
+import { getBranding, getSetting, getSite } from "@/lib/content";
 
-export function Footer() {
-  const year = new Date().getFullYear();
+export async function Footer() {
+  const [site, branding, quickLinks, recognition] = await Promise.all([
+    getSite(),
+    getBranding(),
+    getSetting("footerLinks"),
+    getSetting("recognition"),
+  ]);
 
   return (
     <footer className="mt-10">
@@ -16,11 +20,12 @@ export function Footer() {
             <span className="mb-3 inline-block rounded bg-white px-3 py-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/images/brand/jnu-logo-lockup.png"
-                srcSet="/images/brand/jnu-logo-lockup.png 1x, /images/brand/jnu-logo-lockup@2x.png 2x"
+                src={branding.logo.src}
+                srcSet={branding.logo.srcSet}
+                sizes="200px"
                 alt=""
-                width={195}
-                height={48}
+                width={branding.logo.width}
+                height={branding.logo.height}
                 loading="lazy"
                 className="block h-12 w-auto"
               />
@@ -28,9 +33,10 @@ export function Footer() {
             <p className="m-0 text-[13px] leading-relaxed text-jnu-200">
               {site.tagline}
             </p>
-            {site.recognition.ugcStatus ? (
+            {/* Shown only once the registrar has recorded it WITH evidence. */}
+            {recognition.ugcStatus && recognition.evidence ? (
               <p className="mt-3 text-[13px] text-jnu-200">
-                {site.recognition.ugcStatus}
+                {recognition.ugcStatus}
               </p>
             ) : null}
           </div>
@@ -90,7 +96,7 @@ export function Footer() {
       <div className="chrome-topbar text-jnu-200">
         <div className="boxed flex flex-wrap items-center justify-between gap-2 py-3 text-xs">
           <p className="m-0">
-            © 2008 {site.legalName}. All rights reserved.
+            © {site.established ? `${site.established}–` : ""}{new Date().getFullYear()} {site.legalName}. All rights reserved.
           </p>
           <nav aria-label="Legal" className="flex gap-4">
             <Link

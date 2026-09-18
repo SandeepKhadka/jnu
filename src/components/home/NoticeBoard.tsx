@@ -1,13 +1,14 @@
 import Link from 'next/link'
-import { sortedNotices, formatNoticeDate } from '@/content/notices'
+import type { NoticeDTO } from '@/lib/content-dto'
+import { formatNoticeDate } from '@/lib/content-types'
 
 /**
  * Dated notice list with the era's [View] affordance.
  * Server-rendered from build-time content, so every entry is in the HTML
  * source and indexable — see the note at the top of content/notices.ts.
  */
-export function NoticeBoard({ limit = 6 }: { limit?: number }) {
-  const items = sortedNotices.slice(0, limit)
+export function NoticeBoard({ notices, limit = 6 }: { notices: NoticeDTO[]; limit?: number }) {
+  const items = notices.slice(0, limit)
 
   return (
     <div className="panel">
@@ -22,8 +23,8 @@ export function NoticeBoard({ limit = 6 }: { limit?: number }) {
           {items.map((n) => {
             // PDFs must use a plain anchor: next/link prefetches its target as
             // a route, which requests "<file>.pdf.txt" and 404s.
-            const target = n.href ?? n.file
-            const isFile = !n.href && !!n.file
+            const target = n.href ?? n.fileUrl
+            const isFile = !n.href && !!n.fileUrl
             return (
               <li key={n.id} className="border-b border-hair px-4 py-3 last:border-b-0">
                 <div className="flex items-baseline gap-3">

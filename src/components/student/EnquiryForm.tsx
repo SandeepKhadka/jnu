@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { site } from '@/content/site'
+import { useSite } from '@/components/site/SiteProvider'
 import { submitEnquiry } from '@/lib/store'
 
 type State = 'idle' | 'sending' | 'sent' | 'error'
@@ -15,6 +15,7 @@ type State = 'idle' | 'sending' | 'sent' | 'error'
  * well as here, since a bot can simply not run the client-side code.
  */
 export function EnquiryForm() {
+  const { site } = useSite()
   const [state, setState] = useState<State>('idle')
   const [form, setForm] = useState({
     name: '',

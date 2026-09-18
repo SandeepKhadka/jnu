@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { site } from '@/content/site'
+import { useSite } from '@/components/site/SiteProvider'
 import { verifyCertificate, type CertificateRecord, type VerifyOutcome } from '@/lib/store'
 
 type State =
@@ -23,6 +23,7 @@ type State =
  * is rate limited: unlike a certificate number, this pair is guessable.
  */
 export function CertificateVerify() {
+  const { site } = useSite()
   const [roll, setRoll] = useState('')
   const [dob, setDob] = useState('')
   const [state, setState] = useState<State>({ kind: 'idle' })
@@ -113,6 +114,7 @@ export function CertificateVerify() {
 }
 
 function Result({ state }: { state: { outcome: VerifyOutcome; roll: string } }) {
+  const { site } = useSite()
   const { outcome, roll } = state
 
   if (outcome.kind === 'found') return <Outcome row={outcome.row} />
@@ -157,6 +159,7 @@ function Result({ state }: { state: { outcome: VerifyOutcome; roll: string } }) 
 }
 
 function Outcome({ row }: { row: CertificateRecord }) {
+  const { site } = useSite()
   const tone =
     row.status === 'VERIFIED'
       ? { c: '#2c6549', label: 'Verified' }

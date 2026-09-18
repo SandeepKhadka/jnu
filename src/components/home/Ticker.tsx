@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { sortedNotices, formatNoticeDate } from '@/content/notices'
+import type { NoticeDTO } from '@/lib/content-dto'
+import { formatNoticeDate } from '@/lib/content-types'
 
 /**
  * "Latest Updates" scrolling strip — the original used the Ditty News Ticker
@@ -9,8 +10,8 @@ import { sortedNotices, formatNoticeDate } from '@/content/notices'
  *
  * Pauses on hover and focus; fully disabled under prefers-reduced-motion.
  */
-export function Ticker() {
-  const items = sortedNotices.slice(0, 6)
+export function Ticker({ notices }: { notices: NoticeDTO[] }) {
+  const items = notices.slice(0, 6)
   if (items.length === 0) return null
 
   const row = (keyPrefix: string, ariaHidden: boolean) => (
@@ -25,9 +26,9 @@ export function Ticker() {
             <Link href={n.href} className="text-white underline decoration-white/40 hover:decoration-white">
               {n.title}
             </Link>
-          ) : n.file ? (
+          ) : n.fileUrl ? (
             <a
-              href={n.file}
+              href={n.fileUrl}
               className="text-white underline decoration-white/40 hover:decoration-white"
             >
               {n.title}

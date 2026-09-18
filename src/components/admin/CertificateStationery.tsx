@@ -5,18 +5,19 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import {
-  certificateStationery as layout,
+  DEFAULT_CERTIFICATE_LAYOUT,
+  type CertificateLayout,
   type FieldBox,
   type StationeryField,
-} from '@/content/certificate-layout'
-import { site } from '@/content/site'
+} from '@/lib/content-types'
+import { SITE_URL } from '@/lib/site-url'
 import { logCertificatePrint, type CertificateRecord } from '@/lib/store'
 
 /**
  * Prints a degree onto the university's pre-printed certificate stationery.
  *
  * Only the values that differ per graduate are printed, at the millimetre
- * positions in content/certificate-layout.ts, plus the verification QR. No
+ * positions set under Admin → Certificate layout, plus the verification QR. No
  * border, crest, wording or watermark: all of that is on the blank. The
  * degree is genuine because it is on controlled stationery and signed by
  * hand — this screen supplies the typing, nothing more.
@@ -75,9 +76,12 @@ function issuedDate(iso: string): string {
 export function StationeryOverlay({
   cert,
   onClose,
+  layout = DEFAULT_CERTIFICATE_LAYOUT,
 }: {
   cert: CertificateRecord
   onClose: () => void
+  /** Millimetre positions on the blank, from Admin → Certificate layout. */
+  layout?: CertificateLayout
 }) {
   const [mounted, setMounted] = useState(false)
   const [mode, setMode] = useState<Mode>(cert.status === 'VERIFIED' ? 'stationery' : 'alignment')
@@ -229,7 +233,7 @@ export function StationeryOverlay({
         </p>
       </div>
 
-      <StationeryPage cert={cert} mode={mode} offset={offset} />
+      <StationeryPage cert={cert} mode={mode} offset={offset} layout={layout} />
     </div>,
     document.body
   )
@@ -239,14 +243,16 @@ function StationeryPage({
   cert,
   mode,
   offset,
+  layout,
 }: {
   cert: CertificateRecord
   mode: Mode
   offset: { x: number; y: number }
+  layout: CertificateLayout
 }) {
   const [qr, setQr] = useState<string | null>(null)
   const verifyUrl = cert.serial
-    ? `${site.url.replace(/\/$/, '')}/verify/certificate/?sn=${encodeURIComponent(cert.serial)}`
+    ? `${SITE_URL}/verify/certificate/?sn=${encodeURIComponent(cert.serial)}`
     : null
 
   useEffect(() => {

@@ -17,7 +17,7 @@
  *   public/images/brand/jnu-logo-lockup[@2x].png        header logo
  *   public/images/brand/jnu-logo-lockup.png             also the schema logo
  *   public/images/brand/jnu-crest.png                   crest, cut from the lockup
- *   src/app/icon.png, src/app/apple-icon.png           favicon + home-screen icon
+ *   public/images/brand/icon.png, apple-icon.png        default favicon + icon
  *   public/og/default.jpg                               1200x630 social share card
  *
  * Idempotent; safe to re-run after replacing any original.
@@ -134,12 +134,12 @@ async function buildBrand() {
     .toBuffer()
 
   await sharp(crestSquare).png().toFile(path.join(dir, 'jnu-crest.png'))
-  await sharp(crestSquare).resize(48, 48, { kernel: 'lanczos3' }).png().toFile(out('src', 'app', 'icon.png'))
+  await sharp(crestSquare).resize(48, 48, { kernel: 'lanczos3' }).png().toFile(out('public', 'images', 'brand', 'icon.png'))
   // Home-screen icon: crest on white, iOS masks transparency to black.
   await sharp({ create: { width: 180, height: 180, channels: 4, background: '#ffffff' } })
     .composite([{ input: await sharp(crestSquare).resize(152, 152, { kernel: 'lanczos3' }).toBuffer(), gravity: 'center' }])
     .png()
-    .toFile(out('src', 'app', 'apple-icon.png'))
+    .toFile(out('public', 'images', 'brand', 'apple-icon.png'))
 
   console.log(`brand:   lockup 1x/2x png, crest ${side}px, favicon, apple icon`)
   return { crestSize: side }

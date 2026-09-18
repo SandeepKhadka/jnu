@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import type { GalleryPhoto } from '@/content/gallery'
+import type { GalleryPhotoDTO } from '@/lib/content-dto'
+import { fallbackFormat, pickVariant, srcSetFor } from '@/lib/media-shared'
 
 /**
  * Photo Tour grid with a lightbox.
@@ -17,10 +18,8 @@ import type { GalleryPhoto } from '@/content/gallery'
  * none is above the fold.
  */
 
-const W = 495
-const H = 400
 
-export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
+export function PhotoGallery({ photos }: { photos: GalleryPhotoDTO[] }) {
   const [open, setOpen] = useState<number | null>(null)
   const dialogRef = useRef<HTMLDialogElement>(null)
 
@@ -63,7 +62,7 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
       {/* ! overrides: .prose-jnu ul (list-disc, pl-6, space-y-1) outranks plain utilities. */}
       <ul className="!m-0 grid !list-none grid-cols-2 gap-3 !space-y-0 !p-0 sm:grid-cols-3">
         {photos.map((p, i) => (
-          <li key={p.slug} className="m-0 p-0">
+          <li key={p.id} className="m-0 p-0">
             <figure className="m-0">
               <button
                 type="button"
@@ -72,16 +71,21 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
                 aria-label={`Enlarge: ${p.caption}`}
               >
                 <picture>
-                  <source type="image/webp" srcSet={`/images/gallery/${p.slug}.webp`} />
+                  {srcSetFor(p.variants, 'avif') ? (
+                    <source type="image/avif" srcSet={srcSetFor(p.variants, 'avif')} sizes="(min-width: 640px) 33vw, 50vw" />
+                  ) : null}
+                  <source type="image/webp" srcSet={srcSetFor(p.variants, 'webp')} sizes="(min-width: 640px) 33vw, 50vw" />
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={`/images/gallery/${p.slug}.jpg`}
+                    src={pickVariant(p.variants, 640)?.path}
+                    srcSet={srcSetFor(p.variants, fallbackFormat(p.variants))}
+                    sizes="(min-width: 640px) 33vw, 50vw"
                     alt={p.alt}
-                    width={W}
-                    height={H}
+                    width={p.width}
+                    height={p.height}
                     loading="lazy"
                     decoding="async"
-                    className="block aspect-[495/400] h-auto w-full object-cover transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transition-none"
+                    className="block aspect-[5/4] h-auto w-full object-cover transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transition-none"
                   />
                 </picture>
               </button>
@@ -105,13 +109,18 @@ export function PhotoGallery({ photos }: { photos: GalleryPhoto[] }) {
         {current ? (
           <div className="p-3">
             <picture>
-              <source type="image/webp" srcSet={`/images/gallery/${current.slug}.webp`} />
+              {srcSetFor(current.variants, 'avif') ? (
+                <source type="image/avif" srcSet={srcSetFor(current.variants, 'avif')} sizes="620px" />
+              ) : null}
+              <source type="image/webp" srcSet={srcSetFor(current.variants, 'webp')} sizes="620px" />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={`/images/gallery/${current.slug}.jpg`}
+                src={pickVariant(current.variants, 1024)?.path}
+                srcSet={srcSetFor(current.variants, fallbackFormat(current.variants))}
+                sizes="620px"
                 alt={current.alt}
-                width={W}
-                height={H}
+                width={current.width}
+                height={current.height}
                 className="mx-auto block h-auto max-h-[72vh] w-full object-contain"
               />
             </picture>

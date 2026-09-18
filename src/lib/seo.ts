@@ -1,6 +1,12 @@
+import 'server-only'
+
 import type { Metadata } from 'next'
-import { site } from '@/content/site'
-import { publishedFaculties, type Programme } from '@/content/programmes'
+
+import { getBranding, getFaculties, getPublishedPagePaths, getSetting, getSite } from '@/lib/content'
+import type { ProgrammeDTO } from '@/lib/content-dto'
+import { absoluteUrl, SITE_URL } from '@/lib/site-url'
+
+export { absoluteUrl }
 
 /**
  * Every page builds its metadata through here, so canonical URLs, OG tags and
@@ -8,13 +14,10 @@ import { publishedFaculties, type Programme } from '@/content/programmes'
  * SEO defect was a *relative* canonical (`rel=canonical="index.html"`), which
  * made every URL self-canonicalise ambiguously. `absoluteUrl` prevents that
  * class of bug entirely.
+ *
+ * Async because the site name and default share image are now edited in the
+ * admin panel; pages call it from generateMetadata.
  */
-
-export function absoluteUrl(path = '/'): string {
-  const base = site.url.replace(/\/$/, '')
-  const p = path.startsWith('/') ? path : `/${path}`
-  return `${base}${p}`
-}
 
 type PageMetaInput = {
   title: string
@@ -22,45 +25,41 @@ type PageMetaInput = {
   path: string
   /** Private routes: results, admin. Keeps student data out of the index. */
   noindex?: boolean
+  /** Path or absolute URL; defaults to the share image set in Branding. */
   ogImage?: string
   type?: 'website' | 'article'
   publishedTime?: string
 }
 
-export function pageMetadata({
+export async function pageMetadata({
   title,
   description,
   path,
   noindex = false,
-  ogImage = '/og/default.jpg',
+  ogImage,
   type = 'website',
   publishedTime,
-}: PageMetaInput): Metadata {
+}: PageMetaInput): Promise<Metadata> {
+  const [site, branding] = await Promise.all([getSite(), getBranding()])
   const url = absoluteUrl(path)
+  const image = absoluteUrl(ogImage ?? branding.ogImage)
 
   return {
     title,
     description,
     alternates: { canonical: url },
-    robots: noindex
-      ? { index: false, follow: false, nocache: true }
-      : { index: true, follow: true },
+    robots: noindex ? { index: false, follow: false, nocache: true } : { index: true, follow: true },
     openGraph: {
       type,
       url,
       siteName: site.name,
       title,
       description,
-      locale: site.locale,
-      images: [{ url: absoluteUrl(ogImage), width: 1200, height: 630, alt: title }],
+      locale: 'en_IN',
+      images: [{ url: image, width: 1200, height: 630, alt: title }],
       ...(publishedTime ? { publishedTime } : {}),
     },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-      images: [absoluteUrl(ogImage)],
-    },
+    twitter: { card: 'summary_large_image', title, description, images: [image] },
   }
 }
 
@@ -68,11 +67,17 @@ export function pageMetadata({
 
 /**
  * EducationalOrganization — the single highest-value schema type for a
- * university, and entirely absent from the original site (which shipped only
- * a bare `WebSite` node with an http:// URL).
+ * university. Recognition appears ONLY when the registrar has recorded a
+ * statement with its evidence (see Recognition in the admin panel).
  */
-export function organizationSchema() {
-  const hasApprovals = site.recognition.approvals.length > 0
+export async function organizationSchema() {
+  const [site, branding, recognition] = await Promise.all([
+    getSite(),
+    getBranding(),
+    getSetting('recognition'),
+  ])
+  const hasApprovals = recognition.approvals.length > 0 && Boolean(recognition.evidence)
+  const sameAs = Object.values(site.social).filter(Boolean)
 
   return {
     '@context': 'https://schema.org',
@@ -81,50 +86,50 @@ export function organizationSchema() {
     name: site.name,
     legalName: site.legalName,
     url: absoluteUrl('/'),
-    // The full lockup: Google requires a logo of at least 112px; the crest
-    // alone is only ~94px in the artwork supplied.
-    logo: absoluteUrl('/images/brand/jnu-logo-lockup@2x.png'),
+    logo: absoluteUrl(branding.logo.src),
     email: site.email,
     ...(site.phone ? { telephone: site.phone } : {}),
-    foundingDate: site.established,
+    ...(site.established ? { foundingDate: site.established } : {}),
     address: {
       '@type': 'PostalAddress',
-      streetAddress: site.campus.lines[0],
+      streetAddress: site.campus.lines[0] ?? '',
       addressLocality: 'Jodhpur',
       addressRegion: 'Rajasthan',
       addressCountry: 'IN',
     },
-    // Only ever emitted when the registrar has supplied evidence.
-    ...(hasApprovals ? { accreditedBy: site.recognition.approvals.map((n) => ({ '@type': 'Organization', name: n })) } : {}),
-    sameAs: Object.values(site.social).filter(Boolean),
+    ...(hasApprovals
+      ? { accreditedBy: recognition.approvals.map((n) => ({ '@type': 'Organization', name: n })) }
+      : {}),
+    ...(sameAs.length ? { sameAs } : {}),
   }
 }
 
-export function websiteSchema() {
+export async function websiteSchema() {
+  const site = await getSite()
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     '@id': absoluteUrl('/#website'),
     url: absoluteUrl('/'),
     name: site.name,
-    inLanguage: site.lang,
+    inLanguage: 'en-IN',
     publisher: { '@id': absoluteUrl('/#organization') },
   }
 }
 
 /** Course schema per programme — drives eligibility-rich SERP results. */
-export function courseSchema(p: Programme) {
+export function courseSchema(p: ProgrammeDTO, siteName: string) {
   return {
     '@context': 'https://schema.org',
     '@type': 'Course',
     name: p.name,
-    description: `${p.name} (${p.award}) at ${site.name}. ${p.eligibility}.`,
+    description: `${p.name} (${p.award}) at ${siteName}. ${p.eligibility}.`,
     provider: { '@id': absoluteUrl('/#organization') },
     educationalCredentialAwarded: p.award,
-    inLanguage: site.lang,
+    inLanguage: 'en-IN',
     hasCourseInstance: {
       '@type': 'CourseInstance',
-      courseMode: p.mode === 'Full-time' ? 'onsite' : 'blended',
+      courseMode: p.mode === 'Full-time' ? 'onsite' : p.mode === 'Distance' ? 'online' : 'blended',
       courseWorkload: `P${p.durationMonths}M`,
     },
   }
@@ -155,43 +160,27 @@ export function faqSchema(qas: { q: string; a: string }[]) {
   }
 }
 
-/** Every indexable route, used to generate sitemap.xml. */
-export function indexableRoutes(): string[] {
-  const staticRoutes = [
-    '/',
-    '/about/',
-    '/about/foundation/',
-    '/about/chairperson-message/',
-    '/about/infrastructure/',
-    '/about/academic-council/',
-    '/about/accreditation/',
-    '/about/achievers/',
-    '/about/community-programme/',
-    '/programmes/',
-    '/admission/',
-    '/admission/process/',
-    '/admission/eligibility/',
-    '/admission/fee-structure/',
-    '/admission/syllabus/',
-    '/admission/download-forms/',
-    '/research/',
-    '/placement/',
-    '/student-zone/',
-    '/student-zone/time-table/',
-    '/student-zone/enrollment-status/',
-    '/student-zone/placement-notices/',
-    '/student-zone/downloads/',
-    '/notices/',
-    '/verify/',
-    '/photo-tour/',
-    '/career/',
-    '/contact/',
-    '/privacy/',
-  ]
+/** Routes that have their own page file rather than a CMS page. */
+const FIXED_ROUTES = ['/', '/notices/', '/verify/', '/contact/']
 
-  // Only faculties with a real programme list. An empty one is served
-  // noindex by the page itself, so including it here would contradict that.
-  const facultyRoutes = publishedFaculties.map((f) => `/programmes/${f.slug}/`)
-
-  return [...staticRoutes, ...facultyRoutes]
+/**
+ * Every indexable route, for sitemap.xml: fixed routes, every published CMS
+ * page, and every faculty that has at least one published programme (an
+ * empty faculty is served noindex, so listing it would contradict itself).
+ */
+export async function indexableRoutes(): Promise<{ path: string; updatedAt?: string }[]> {
+  const [pages, faculties] = await Promise.all([getPublishedPagePaths(), getFaculties()])
+  const seen = new Set<string>()
+  const out: { path: string; updatedAt?: string }[] = []
+  const add = (path: string, updatedAt?: string) => {
+    if (seen.has(path)) return
+    seen.add(path)
+    out.push({ path, updatedAt })
+  }
+  FIXED_ROUTES.forEach((p) => add(p))
+  pages.forEach((p) => add(p.path, p.updatedAt))
+  faculties.filter((f) => f.programmes.length > 0).forEach((f) => add(`/programmes/${f.slug}/`))
+  return out
 }
+
+export { SITE_URL }

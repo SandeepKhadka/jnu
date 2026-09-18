@@ -1,18 +1,19 @@
 import { db } from '@/lib/db'
 import { ok, fail, handleError } from '@/lib/api'
 import { requireStaff } from '@/lib/auth'
+import { requirePermission } from '@/lib/admin-route'
 import { clientIp, rateLimit } from '@/lib/ratelimit'
 import { normaliseDob } from '@/lib/student-auth'
 import { removeUpload, storeUpload, type UploadKind } from '@/lib/storage'
 import { isEmail, isIndianState, isPincode, normaliseMobile } from '@/lib/validate'
-import { allProgrammes } from '@/content/programmes'
+import { getAllProgrammeNames } from '@/lib/content'
 
 export const dynamic = 'force-dynamic'
 
 /** GET /api/applications — staff only. */
 export async function GET() {
   try {
-    await requireStaff()
+    await requirePermission('applications.manage')
     const rows = await db.application.findMany({
       orderBy: { createdAt: 'desc' },
       take: 200,
@@ -129,7 +130,7 @@ export async function POST(req: Request) {
     if (!isIndianState(text('state'))) reject('Select a state or union territory.')
 
     const programme = text('programme')
-    if (!allProgrammes.some((p) => p.name === programme)) {
+    if (!(await getAllProgrammeNames()).includes(programme)) {
       reject('Select a programme from the list.')
     }
 

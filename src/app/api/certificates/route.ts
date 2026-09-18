@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
-import { audit, requireRole, requireStaff } from '@/lib/auth'
+import { audit, requireRole } from '@/lib/auth'
+import { requirePermission } from '@/lib/admin-route'
 import { ok, fail, handleError, readJson } from '@/lib/api'
 import { formatSerial } from '@/lib/marksheet'
 import { ensureCertificateTokens, newVerifyToken } from '@/lib/marksheet-token'
@@ -9,7 +10,7 @@ export const dynamic = 'force-dynamic'
 /** GET /api/certificates — staff only. The full register, each with its serial. */
 export async function GET() {
   try {
-    await requireStaff()
+    await requirePermission('certificates.view')
     const rows = await db.certificate.findMany({ orderBy: { issuedOn: 'desc' }, take: 500 })
     const tokens = await ensureCertificateTokens(rows)
     return ok({

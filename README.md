@@ -29,10 +29,48 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 
 Sign in at **`/admin/login/`** (also linked as "Staff Login" in the footer):
 
-| Email | Password | Role |
-| --- | --- | --- |
-| `admin@jnu.local` | `jnu@2026` | Registrar |
-| `exam@jnu.local` | `exam@2026` | Exam cell |
+### Creating the first administrator
+
+There are no default or demo accounts anywhere in this project. Create the
+first administrator on the server:
+
+```bash
+npm run admin:create -- --email you@university.in --name "Your Name"
+```
+
+It asks for a password without echoing it. Every other account is created from
+**Admin → Staff accounts**, which issues a one-time password the new user must
+replace at first sign-in.
+
+Demo students, results and certificates for local testing:
+
+```bash
+npm run db:seed:demo     # refuses to run with NODE_ENV=production
+```
+
+### The admin panel
+
+Sign in at `/admin/login/`. Everything the public site shows is editable there
+— logo and branding, homepage text, carousel, pages, faculties and programmes,
+notices, photo gallery, menus, media, plus students, results, degrees,
+applications, enquiries, staff accounts and the audit log.
+
+**How edits reach the site.** Public pages are still prerendered to static HTML,
+which is what search engines index. The database is the source of truth; saving
+in the admin panel invalidates the affected pages and they regenerate on the
+next request, usually within a second. There is no redeploy and no build step,
+and no page is ever rendered per-request for visitors.
+
+**Roles** (`src/lib/permissions.ts` — one table, enforced by the API and used to
+build the sidebar, so the two cannot drift apart):
+
+| Role | Can do |
+|---|---|
+| Administrator | Everything, including staff accounts and every setting |
+| Registrar | Students, degrees, corrections, admissions, recognition, examinations |
+| Examination Cell | Students, results, photograph approvals |
+| Content Editor | Website content, programmes, media, branding — no student data |
+
 
 Both are click-to-fill on the login page. They are created by `npm run db:seed`,
 which stores only a bcrypt hash. Change them before any live deployment.

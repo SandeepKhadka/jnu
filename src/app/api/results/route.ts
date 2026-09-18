@@ -1,7 +1,9 @@
 import { Prisma } from '@prisma/client'
 
 import { db } from '@/lib/db'
-import { requireStaff, audit } from '@/lib/auth'
+import { audit } from '@/lib/auth'
+import { requirePermission } from '@/lib/admin-route'
+import { marksProblem } from '@/lib/results-validate'
 import { ok, fail, handleError, readJson } from '@/lib/api'
 
 export const dynamic = 'force-dynamic'
@@ -9,7 +11,7 @@ export const dynamic = 'force-dynamic'
 /** GET /api/results — staff only. Full list including unpublished drafts. */
 export async function GET() {
   try {
-    await requireStaff()
+    await requirePermission('results.manage')
     const rows = await db.result.findMany({ orderBy: { rollNo: 'asc' }, take: 500 })
     return ok({ results: rows.map((r) => ({ ...r, subjects: JSON.parse(r.subjects) })) })
   } catch (e) {
@@ -33,62 +35,6 @@ type NewResult = {
 const STATUSES = ['PASS', 'FAIL', 'ATKT', 'WITHHELD']
 
 /**
- * Rejects marks that cannot be true.
- *
- * A published result now prints as a statement of marks carrying a serial the
- * public can verify, so an impossible figure is not a display glitch: it is a
- * university document asserting something false, with the university's own
- * verification service confirming it. The seed data shipped with "88 out of
- * 50" in a laboratory paper for months before the printed sheet made it
- * obvious; nothing downstream would ever have caught it.
- *
- * When subjects are supplied, the grand total must be their sum. It is
- * rejected rather than silently recomputed — a total that disagrees with its
- * own rows means the import is wrong somewhere, and the exam cell needs to
- * know which row rather than have it papered over.
- */
-function marksProblem(r: NewResult, label: string): string | null {
-  const obtained = Number(r.marksObtained) || 0
-  const max = Number(r.marksMax) || 0
-  if (obtained < 0 || max < 0) return `${label}: marks cannot be negative.`
-  if (obtained > max) return `${label}: total obtained (${obtained}) exceeds the maximum (${max}).`
-
-  const subjects = Array.isArray(r.subjects) ? (r.subjects as Record<string, unknown>[]) : []
-  if (subjects.length === 0) return null
-
-  let sumObtained = 0
-  let sumMax = 0
-  for (const sub of subjects) {
-    const name = String(sub.code ?? sub.name ?? 'a subject')
-    const o = Number(sub.obtained)
-    const m = Number(sub.max)
-    if (!Number.isFinite(o) || !Number.isFinite(m) || m <= 0) {
-      return `${label}: ${name} needs numeric obtained and maximum marks.`
-    }
-    if (o < 0 || o > m) return `${label}: ${name} has ${o} out of ${m}.`
-
-    const hasSplit = sub.theory !== undefined || sub.practical !== undefined
-    if (hasSplit) {
-      const t = Number(sub.theory ?? 0)
-      const pr = Number(sub.practical ?? 0)
-      if (t < 0 || pr < 0 || t + pr !== o) {
-        return `${label}: ${name} theory (${t}) + practical (${pr}) must equal ${o}.`
-      }
-    }
-    sumObtained += o
-    sumMax += m
-  }
-
-  if (sumObtained !== obtained || sumMax !== max) {
-    return (
-      `${label}: grand total ${obtained}/${max} does not match the subjects, ` +
-      `which add up to ${sumObtained}/${sumMax}.`
-    )
-  }
-  return null
-}
-
-/**
  * POST /api/results — staff only. Creates one result, or many when `rows` is
  * supplied (CSV import).
  *
@@ -97,7 +43,7 @@ function marksProblem(r: NewResult, label: string): string | null {
  */
 export async function POST(req: Request) {
   try {
-    const user = await requireStaff()
+    const user = await requirePermission('results.manage')
     const body = await readJson<NewResult & { rows?: NewResult[] }>(req)
     if (!body) return fail('Invalid request body.')
 

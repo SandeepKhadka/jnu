@@ -1,42 +1,44 @@
 import type { MetadataRoute } from 'next'
-import { absoluteUrl, indexableRoutes } from '@/lib/seo'
-import { sortedNotices } from '@/content/notices'
-import { enabledSlides, galleryPhotos } from '@/content/gallery'
 
-// Required by `output: 'export'` — emits a real /sitemap.xml file at build time.
-export const dynamic = 'force-static'
+import { getGallery, getNotices, getSlides } from '@/lib/content'
+import { pickVariant } from '@/lib/media-shared'
+import { absoluteUrl, indexableRoutes } from '@/lib/seo'
 
 /**
- * Generated at build time into /out/sitemap.xml.
- * The original site had NO sitemap at all — both sitemap.xml and
- * sitemap_index.xml returned 404.
+ * sitemap.xml, built from the database: fixed routes, every published CMS
+ * page and every faculty with programmes. Results, admin and student routes
+ * are absent by construction — indexableRoutes() never includes them.
  *
- * Results and admin routes are absent by construction: indexableRoutes()
- * never includes them, so student data cannot leak into the index via here.
+ * lastmod is the page's real last-edit time where one exists. A lastmod of
+ * "now" on every build tells search engines everything changed on every
+ * deploy, and they learn to ignore the field.
  */
-export default function sitemap(): MetadataRoute.Sitemap {
-  const lastNotice = sortedNotices[0]?.date
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const [routes, notices, slides, gallery] = await Promise.all([
+    indexableRoutes(),
+    getNotices(),
+    getSlides(),
+    getGallery(),
+  ])
+  const lastNotice = notices[0]?.date
 
-  return indexableRoutes().map((route) => {
-    const isHome = route === '/'
-    const isNoticeIndex = route === '/notices/'
+  return routes.map(({ path, updatedAt }) => {
+    const isHome = path === '/'
+    const images = isHome
+      ? slides.map((s) => pickVariant(s.variants, 1600)?.path).filter(Boolean)
+      : path === '/photo-tour/'
+        ? gallery.flatMap((c) => c.photos.map((p) => pickVariant(p.variants, 1200)?.path)).filter(Boolean)
+        : []
 
-    // Image entries: how Google finds photographs that are not otherwise
-    // linked as documents. The homepage carries its carousel slides and the
-    // Photo Tour every gallery image.
-    const images =
-      isHome
-        ? enabledSlides.map((s) => absoluteUrl(`/images/carousel/${s.slug}-1600.jpg`))
-        : route === '/photo-tour/'
-          ? galleryPhotos.map((p) => absoluteUrl(`/images/gallery/${p.slug}.jpg`))
-          : undefined
+    const lastModified =
+      path === '/notices/' && lastNotice ? new Date(lastNotice) : updatedAt ? new Date(updatedAt) : undefined
 
     return {
-      url: absoluteUrl(route),
-      ...(images ? { images } : {}),
-      lastModified: isNoticeIndex && lastNotice ? new Date(lastNotice) : new Date(),
-      changeFrequency: isHome || isNoticeIndex ? 'weekly' : 'monthly',
-      priority: isHome ? 1 : route.split('/').filter(Boolean).length === 1 ? 0.8 : 0.6,
+      url: absoluteUrl(path),
+      ...(lastModified ? { lastModified } : {}),
+      changeFrequency: isHome || path === '/notices/' ? 'weekly' : 'monthly',
+      priority: isHome ? 1 : path.split('/').filter(Boolean).length === 1 ? 0.8 : 0.6,
+      ...(images.length ? { images: images.map((i) => absoluteUrl(i as string)) } : {}),
     }
   })
 }

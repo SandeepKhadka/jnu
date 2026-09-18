@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-import { site } from '@/content/site'
+import { useSite } from '@/components/site/SiteProvider'
 import { findCertificateBySerial, type CertificateBySerial } from '@/lib/store'
 
 type Outcome = Awaited<ReturnType<typeof findCertificateBySerial>>
@@ -78,6 +78,7 @@ export function CertificateSerialVerify() {
 }
 
 function Result({ outcome }: { outcome: Outcome }) {
+  const { site } = useSite()
   if (outcome.kind === 'error') {
     return (
       <div className="panel border-l-[3px] border-l-[#9a6a10] p-4">
@@ -105,6 +106,7 @@ function Result({ outcome }: { outcome: Outcome }) {
 }
 
 function Found({ c }: { c: CertificateBySerial }) {
+  const { site } = useSite()
   const tone =
     c.status === 'VERIFIED'
       ? { c: '#2c6549', label: 'Verified' }

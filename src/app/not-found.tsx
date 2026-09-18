@@ -1,5 +1,7 @@
 import Link from 'next/link'
-import { quickLinks } from '@/content/nav'
+import { Header } from '@/components/layout/Header'
+import { Footer } from '@/components/layout/Footer'
+import { getSetting } from '@/lib/content'
 
 /**
  * A 404 that recovers the visitor rather than dead-ending them.
@@ -7,8 +9,15 @@ import { quickLinks } from '@/content/nav'
  * arriving from a stale search result or bookmark lands on this page, so the
  * redirect map (see README) plus this list is how that traffic is retained.
  */
-export default function NotFound() {
+/**
+ * Rendered outside the (site) layout, so it brings its own header and footer.
+ */
+export default async function NotFound() {
+  const quickLinks = await getSetting('footerLinks')
   return (
+    <>
+    <Header />
+    <main id="main">
     <div className="boxed py-14">
       <div className="mx-auto max-w-2xl text-center">
         <p className="m-0 font-display text-[13px] uppercase tracking-[0.2em] text-sand-600">
@@ -40,5 +49,8 @@ export default function NotFound() {
         </Link>
       </p>
     </div>
+    </main>
+    <Footer />
+    </>
   )
 }

@@ -2,14 +2,14 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { nav } from '@/content/nav'
+import type { MenuItem } from '@/lib/content-types'
 
 /**
  * Hover-opened dropdowns, era-correct — but keyboard and touch accessible,
  * which the original was not. `focus-within` in globals.css keeps the panel
  * open for keyboard users; the mobile disclosure below handles touch.
  */
-export function MainNav() {
+export function MainNav({ items }: { items: MenuItem[] }) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -30,7 +30,7 @@ export function MainNav() {
           id="main-nav-list"
           className={`${open ? 'block' : 'hidden'} lg:flex lg:flex-wrap lg:items-stretch`}
         >
-          {nav.map((item) => (
+          {items.map((item) => (
             // `relative` at every breakpoint on purpose: the panel below is
             // absolutely positioned with top-full, so this <li> has to be its
             // containing block. With `lg:static` here the panel resolved

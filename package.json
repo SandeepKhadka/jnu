@@ -5,16 +5,18 @@
   "description": "Static, SEO-first university website with admin panel and results lookup",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma migrate deploy && next build",
+    "build": "prisma generate && prisma migrate deploy && tsx prisma/seed.ts && next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma migrate reset --force && npm run db:seed",
+    "db:reset": "prisma migrate reset --force --skip-seed && npm run db:seed",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
-    "images": "tsx scripts/optimise-images.ts"
+    "images": "tsx scripts/optimise-images.ts",
+    "db:seed:demo": "tsx prisma/seed-demo.ts",
+    "admin:create": "tsx scripts/create-admin.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

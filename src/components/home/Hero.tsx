@@ -3,8 +3,9 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { enabledSlides, SLIDE_WIDTHS, type Slide } from '@/content/gallery'
-import { site } from '@/content/site'
+import type { SlideDTO } from '@/lib/content-dto'
+import type { HomeContent } from '@/lib/content-types'
+import { fallbackFormat, pickVariant, srcSetFor } from '@/lib/media-shared'
 
 /**
  * Homepage carousel — the university's own campus photography.
@@ -36,19 +37,17 @@ import { site } from '@/content/site'
 
 const INTERVAL_MS = 6000
 
-function sources(slide: Slide) {
-  const set = (ext: string) =>
-    SLIDE_WIDTHS.map((w) => `/images/carousel/${slide.slug}-${w}.${ext} ${w}w`).join(', ')
+function sources(slide: SlideDTO) {
+  const f = fallbackFormat(slide.variants)
   return {
-    avif: set('avif'),
-    webp: set('webp'),
-    jpg: set('jpg'),
-    fallback: `/images/carousel/${slide.slug}-1024.jpg`,
+    avif: srcSetFor(slide.variants, 'avif'),
+    webp: srcSetFor(slide.variants, 'webp'),
+    fallbackSet: srcSetFor(slide.variants, f),
+    fallback: pickVariant(slide.variants, 1024)?.path ?? '',
   }
 }
 
-export function Hero() {
-  const slides = enabledSlides
+export function Hero({ slides, home }: { slides: SlideDTO[]; home: HomeContent }) {
   const [index, setIndex] = useState(0)
   /** False only for users who have asked their system for reduced motion. */
   const [autoplay, setAutoplay] = useState(true)
@@ -123,7 +122,7 @@ export function Hero() {
             const active = i === index
             return (
               <div
-                key={s.slug}
+                key={s.id}
                 role="group"
                 aria-roledescription="slide"
                 aria-label={`${i + 1} of ${slides.length}`}
@@ -131,20 +130,20 @@ export function Hero() {
                 className={`absolute inset-0 transition-opacity duration-700 motion-reduce:transition-none ${
                   active ? 'opacity-100' : 'pointer-events-none opacity-0'
                 }`}
-                style={s.banner ? { background: s.banner.background } : undefined}
+                style={s.banner ? { background: s.bannerBackground ?? '#ffffff' } : undefined}
               >
                 {armed.has(i) ? (
                 <picture>
-                  <source type="image/avif" srcSet={src.avif} sizes="100vw" />
-                  <source type="image/webp" srcSet={src.webp} sizes="100vw" />
+                  {src.avif ? <source type="image/avif" srcSet={src.avif} sizes="100vw" /> : null}
+                  {src.webp ? <source type="image/webp" srcSet={src.webp} sizes="100vw" /> : null}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={src.fallback}
-                    srcSet={src.jpg}
+                    srcSet={src.fallbackSet}
                     sizes="100vw"
                     alt={s.alt}
-                    width={1600}
-                    height={658}
+                    width={s.width}
+                    height={s.height}
                     // Slide 1 is the LCP element: eager and first in the queue.
                     // Every other slide waits until it is needed.
                     loading={i === 0 ? 'eager' : 'lazy'}
@@ -191,7 +190,7 @@ export function Hero() {
             <div className="absolute bottom-3 right-3 z-10 flex items-center gap-2 rounded-full bg-black/35 px-2.5 py-1.5">
               {slides.map((s, i) => (
                 <button
-                  key={s.slug}
+                  key={s.id}
                   type="button"
                   onClick={() => go(i)}
                   aria-label={`Show photograph ${i + 1}`}
@@ -220,13 +219,13 @@ export function Hero() {
           onBanner ? 'md:opacity-0 md:[&_*]:!pointer-events-none' : ''
         }`}
       >
-        <Caption />
+        <Caption home={home} />
       </div>
     </section>
   )
 }
 
-function Caption() {
+function Caption({ home }: { home: HomeContent }) {
   return (
     <div className="my-4 max-w-xl rounded border border-white/15 bg-jnu-900/90 p-5 md:pointer-events-auto md:m-0 md:bg-jnu-900/80 md:p-7">
       {/*
@@ -235,23 +234,24 @@ function Caption() {
         the university does.
       */}
       <h1 className="m-0 font-display uppercase leading-tight tracking-wide text-white">
-        <span className="mb-1.5 block text-[12px] tracking-[0.2em] text-sand-400 md:text-[13px]">
-          {site.name}
-        </span>
-        <span className="block text-[22px] md:text-[28px]">
-          Professional and technical education in Jodhpur
-        </span>
+        {home.heroEyebrow ? (
+          <span className="mb-1.5 block text-[12px] tracking-[0.2em] text-sand-400 md:text-[13px]">
+            {home.heroEyebrow}
+          </span>
+        ) : null}
+        <span className="block text-[22px] md:text-[28px]">{home.heroHeadline}</span>
       </h1>
-      <p className="mb-5 mt-3 text-[14px] leading-relaxed text-jnu-100">
-        Programmes in engineering, management, pharmacy, computer applications, law, education,
-        sciences, the arts and allied health.
-      </p>
+      {home.heroBody ? (
+        <p className="mb-5 mt-3 text-[14px] leading-relaxed text-jnu-100">{home.heroBody}</p>
+      ) : (
+        <div className="mb-5" />
+      )}
       <div className="flex flex-wrap gap-2">
-        <Link href="/programmes/" className="btn btn-sand">
-          Browse Programmes
+        <Link href={home.primaryCta.href} className="btn btn-sand">
+          {home.primaryCta.label}
         </Link>
-        <Link href="/admission/process/" className="btn btn-secondary">
-          Apply Online
+        <Link href={home.secondaryCta.href} className="btn btn-secondary">
+          {home.secondaryCta.label}
         </Link>
       </div>
     </div>

@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { site } from '@/content/site'
+import { SITE_HOST } from '@/lib/site-url'
+import { getJson } from '@/lib/admin-client'
+import { DEFAULT_CERTIFICATE_LAYOUT, type CertificateLayout } from '@/lib/content-types'
 import {
   listCertificates,
   issueCertificate,
@@ -57,6 +59,8 @@ export function CertificateRecords() {
   const [preview, setPreview] = useState<CertificateRecord | null>(null)
   const [printing, setPrinting] = useState<CertificateRecord | null>(null)
   const [isRegistrar, setIsRegistrar] = useState(false)
+  // Stationery positions are set under Examinations; printing reads them.
+  const [layout, setLayout] = useState<CertificateLayout>(DEFAULT_CERTIFICATE_LAYOUT)
 
   const load = useCallback(async () => {
     setRows(await listCertificates())
@@ -64,7 +68,10 @@ export function CertificateRecords() {
 
   useEffect(() => {
     void load()
-    void getSession().then((s) => setIsRegistrar(s?.role === 'registrar'))
+    void getSession().then((s) => setIsRegistrar(s?.role === 'registrar' || s?.role === 'admin'))
+    void getJson<{ value: CertificateLayout }>('/api/admin/settings/certificateLayout').then((res) => {
+      if (res.ok) setLayout(res.data.value)
+    })
   }, [load])
 
   // Print isolation for the specimen preview.
@@ -147,7 +154,7 @@ export function CertificateRecords() {
   return (
     <div className="space-y-6">
       {preview ? <PreviewOverlay cert={preview} onClose={() => setPreview(null)} /> : null}
-      {printing ? <StationeryOverlay cert={printing} onClose={closePrinting} /> : null}
+      {printing ? <StationeryOverlay cert={printing} onClose={closePrinting} layout={layout} /> : null}
 
       <div className="panel border-l-[3px] border-l-sand-500">
         <div className="panel-body">
@@ -419,7 +426,7 @@ function PreviewOverlay({
         <CertificateTemplate cert={cert} />
 
         <p className="no-print mt-3 text-center text-[12px] text-jnu-100">
-          Preview only. Verifiable at {site.url.replace(/^https?:\/\//, '')}/verify/certificate/
+          Preview only. Verifiable at {SITE_HOST}/verify/certificate/
           {cert.serial ? (
             <>
               {' — serial '}

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-import { site } from '@/content/site'
+import { useSite } from '@/components/site/SiteProvider'
 import { divisionFor, dottedDate, percentageOf } from '@/lib/marksheet'
 import { verifyMarksheet, type MarksheetVerifyOutcome } from '@/lib/store'
 
@@ -83,6 +83,7 @@ export function MarksheetVerify() {
 }
 
 function Outcome({ outcome }: { outcome: MarksheetVerifyOutcome }) {
+  const { site } = useSite()
   if (outcome.kind === 'error') {
     return (
       <div className="panel border-l-[3px] border-l-[#9a6a10] p-4">

@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import { requireStaff } from '@/lib/auth'
+import { requirePermission } from '@/lib/admin-route'
 import { ok, fail, handleError, readJson } from '@/lib/api'
 
 export const dynamic = 'force-dynamic'
@@ -7,7 +8,7 @@ export const dynamic = 'force-dynamic'
 /** GET /api/enquiries — staff only. */
 export async function GET() {
   try {
-    await requireStaff()
+    await requirePermission('enquiries.manage')
     const rows = await db.enquiry.findMany({ orderBy: { createdAt: 'desc' }, take: 200 })
     return ok({ enquiries: rows })
   } catch (e) {

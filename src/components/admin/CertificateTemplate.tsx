@@ -1,6 +1,7 @@
 'use client'
 
-import { site } from '@/content/site'
+import { useSite } from '@/components/site/SiteProvider'
+import { SITE_HOST } from '@/lib/site-url'
 import type { CertificateRecord } from '@/lib/store'
 
 /**
@@ -20,6 +21,7 @@ import type { CertificateRecord } from '@/lib/store'
  * so it survives printing and PDF export.
  */
 export function CertificateTemplate({ cert }: { cert: CertificateRecord }) {
+  const { site } = useSite()
   const issued = new Date(`${cert.issued_on}T00:00:00Z`).toLocaleDateString('en-IN', {
     day: '2-digit',
     month: 'long',
@@ -96,7 +98,7 @@ export function CertificateTemplate({ cert }: { cert: CertificateRecord }) {
             </div>
 
             <p className="cert-verify">
-              Verify this certificate at {site.url.replace(/^https?:\/\//, '')}/verify/ using
+              Verify this certificate at {SITE_HOST}/verify/ using
               the certificate number above.
             </p>
           </footer>

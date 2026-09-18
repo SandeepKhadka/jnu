@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 
-import { formatNoticeDate } from '@/content/notices'
+import { formatNoticeDate } from '@/lib/content-types'
 import { CORRECTABLE_FIELDS, type CorrectableField } from '@/lib/corrections'
 import {
   getReviewQueue,
