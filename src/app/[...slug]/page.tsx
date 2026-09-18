@@ -18,7 +18,7 @@ import { pageMetadata } from '@/lib/seo'
  */
 
 /** Content paths that have a dedicated route file and must not be generated here. */
-const OWNED_ELSEWHERE = new Set(['/admission/process/'])
+const OWNED_ELSEWHERE = new Set(['/admission/process/', '/photo-tour/'])
 
 function toParams(path: string) {
   return { slug: path.split('/').filter(Boolean) }

@@ -454,16 +454,13 @@ export const contentPages: ContentPage[] = [
     path: '/photo-tour/',
     title: 'Photo Tour',
     description:
-      'Photographs of the Jodhpur National University campus — academic blocks, laboratories, library, hostels and sports facilities.',
-    intro: 'The campus, building by building.',
+      'Photographs of the Jodhpur National University campus at Boranada, Jodhpur — academic blocks, laboratories, student life, convocations and community outreach.',
+    intro: 'The campus, its laboratories and the people who use them.',
     crumbs: [{ name: 'Photo Tour', path: '/photo-tour/' }],
     body: [
-      { type: 'p', text: 'The campus is on Jhanwar Road at Boranada, on the outskirts of Jodhpur. The tour below follows the route a visitor takes from the main gate.' },
-      { type: 'h2', text: 'What the tour covers' },
-      { type: 'table', head: ['Location', 'What to see'], rows: [['Main gate and approach', 'Entrance, security post and visitor parking'], ['Administrative block', 'Registrar’s office, accounts, admission counter'], ['Academic block', 'Lecture theatres, departmental offices, seminar rooms'], ['Engineering laboratories', 'Surveying, strength of materials, electrical machines, workshop'], ['Pharmacy laboratories', 'Pharmaceutics, chemistry and pharmacology laboratories'], ['Computing centre', 'Networked laboratories and project room'], ['Central library', 'Reading room, stacks and reference section'], ['Hostels', 'Separate blocks for men and women, and the mess'], ['Sports ground', 'Cricket and football ground, indoor games room'], ['Canteen and open areas', 'Student common spaces']] },
+      { type: 'p', text: 'The campus is on Jhanwar Road at Boranada, on the outskirts of Jodhpur. The photographs below are grouped by what they show: the campus itself, laboratories and workshops, student life, convocations and events, and the university’s community outreach. Select any photograph to see it larger.' },
       { type: 'h2', text: 'Visiting in person' },
       { type: 'p', text: 'Prospective students and parents are welcome to visit the campus on working days between 10:00 and 16:00. A visit is worth making before you accept an offer anywhere: ask to see the laboratories for your programme, ask how many students share each workstation, and ask to meet a current student in the department. Arrange a visit through the contact page.' },
-      { type: 'note', audience: 'maintainer', text: 'Add campus photographs to /public/images/gallery/ as AVIF or WebP, each under about 150 KB, with descriptive alt text naming what is shown. The previous site served 2013-era JPEGs of up to 1.09 MB each, which was its single worst performance problem.' },
     ],
   },
   {

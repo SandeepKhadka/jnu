@@ -38,7 +38,8 @@ export const metadata: Metadata = {
   formatDetection: { telephone: false, address: false, email: false },
   alternates: { canonical: absoluteUrl('/') },
   robots: { index: true, follow: true },
-  // Favicon comes from src/app/icon.svg — replace it with the real crest.
+  // Favicon and home-screen icon: src/app/icon.png and apple-icon.png, cut
+  // from the university crest by scripts/optimise-images.ts.
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -10,9 +10,21 @@ export function Footer() {
       <div className="bg-jnu-800 text-jnu-100">
         <div className="boxed grid gap-8 py-10 md:grid-cols-2 lg:grid-cols-4">
           <div>
-            <h2 className="mb-3 font-display text-[15px] uppercase tracking-wide text-white">
-              {site.shortName}
-            </h2>
+            <h2 className="sr-only">{site.name}</h2>
+            {/* On a white plate: the lockup's navy lettering disappears on the
+                footer's navy background. Lazy — it is below the fold. */}
+            <span className="mb-3 inline-block rounded bg-white px-3 py-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/images/brand/jnu-logo-lockup.png"
+                srcSet="/images/brand/jnu-logo-lockup.png 1x, /images/brand/jnu-logo-lockup@2x.png 2x"
+                alt=""
+                width={195}
+                height={48}
+                loading="lazy"
+                className="block h-12 w-auto"
+              />
+            </span>
             <p className="m-0 text-[13px] leading-relaxed text-jnu-200">
               {site.tagline}
             </p>

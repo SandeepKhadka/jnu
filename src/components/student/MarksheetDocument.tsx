@@ -84,12 +84,12 @@ export function MarksheetDocument({
           {/* ---- security layers (in flow, so they print) ---- */}
           <Microprint text={site.name} />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/logo.png" alt="" aria-hidden="true" className="ms-crest-ghost" />
+          <img src="/images/brand/jnu-crest.png" alt="" aria-hidden="true" className="ms-crest-ghost" />
 
           {/* ---- header ---- */}
           <header className="ms-head">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/logo.png" alt={`${site.name} crest`} className="ms-crest" />
+            <img src="/images/brand/jnu-crest.png" alt={`${site.name} crest`} className="ms-crest" />
 
             <div className="ms-title-block">
               <p className="ms-web">www.{host.replace(/^www\./, '')}</p>

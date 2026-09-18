@@ -32,7 +32,7 @@ export function pageMetadata({
   description,
   path,
   noindex = false,
-  ogImage = '/og/default.png',
+  ogImage = '/og/default.jpg',
   type = 'website',
   publishedTime,
 }: PageMetaInput): Metadata {
@@ -81,7 +81,9 @@ export function organizationSchema() {
     name: site.name,
     legalName: site.legalName,
     url: absoluteUrl('/'),
-    logo: absoluteUrl('/images/logo.png'),
+    // The full lockup: Google requires a logo of at least 112px; the crest
+    // alone is only ~94px in the artwork supplied.
+    logo: absoluteUrl('/images/brand/jnu-logo-lockup@2x.png'),
     email: site.email,
     ...(site.phone ? { telephone: site.phone } : {}),
     foundingDate: site.established,
