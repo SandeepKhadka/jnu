@@ -120,8 +120,6 @@ export const SLIDE_WIDTHS = [640, 1024, 1600] as const
 
 export const slides: Slide[] = [
   { slug: 'campus-aerial', source: 'header_carousel_1.jpg', enabled: true, alt: 'Aerial view of the Jodhpur National University campus at Boranada, Jodhpur' },
-  { slug: 'engineering-students', source: 'header_carousel_4.jpg', enabled: true, alt: 'Students outside the Faculty of Engineering and Technology building' },
-  { slug: 'second-convocation', source: 'header_carousel_3.jpg', enabled: true, alt: 'An honorary degree being conferred at the university’s second convocation' },
   {
     slug: 'distance-education',
     source: 'header_carousel_2.jpg',
@@ -138,6 +136,8 @@ export const slides: Slide[] = [
     keepTopRows: 603,
     banner: { background: '#fbca2d' },
   },
+  { slug: 'engineering-students', source: 'header_carousel_4.jpg', enabled: true, alt: 'Students outside the Faculty of Engineering and Technology building' },
+  { slug: 'second-convocation', source: 'header_carousel_3.jpg', enabled: true, alt: 'An honorary degree being conferred at the university’s second convocation' },
 ]
 
 export const enabledSlides = slides.filter((s) => s.enabled)

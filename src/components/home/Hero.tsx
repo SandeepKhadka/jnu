@@ -25,8 +25,10 @@ import { site } from '@/content/site'
  *
  * Accessibility follows the WAI carousel pattern: labelled region and slides,
  * previous/next and per-slide controls, rotation that pauses on hover and on
- * keyboard focus, a pause button, and no autoplay at all for anyone who has
- * asked their system for reduced motion. While it rotates on its own the live
+ * keyboard focus, and no autoplay at all for anyone who has asked their
+ * system for reduced motion. There is deliberately no play/pause button (the
+ * client's choice); hover, focus and reduced-motion are the pause mechanisms
+ * that remain, which is why none of them should be removed. While it rotates on its own the live
  * region is off, so screen readers are not interrupted every six seconds.
  *
  * The caption carries the homepage <h1>, which the page previously lacked.
@@ -48,7 +50,8 @@ function sources(slide: Slide) {
 export function Hero() {
   const slides = enabledSlides
   const [index, setIndex] = useState(0)
-  const [playing, setPlaying] = useState(true)
+  /** False only for users who have asked their system for reduced motion. */
+  const [autoplay, setAutoplay] = useState(true)
   const [hovered, setHovered] = useState(false)
   const [focused, setFocused] = useState(false)
   const regionRef = useRef<HTMLElement>(null)
@@ -79,7 +82,7 @@ export function Hero() {
   // Respect reduced motion: never start rotating for these users.
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    if (mq.matches) setPlaying(false)
+    if (mq.matches) setAutoplay(false)
   }, [])
 
   const go = useCallback(
@@ -87,7 +90,7 @@ export function Hero() {
     [slides.length]
   )
 
-  const rotating = playing && !hovered && !focused && slides.length > 1
+  const rotating = autoplay && !hovered && !focused && slides.length > 1
   /** A text banner is on screen: show it whole and move the caption aside. */
   const onBanner = Boolean(slides[index]?.banner)
 
@@ -186,14 +189,6 @@ export function Hero() {
             </button>
 
             <div className="absolute bottom-3 right-3 z-10 flex items-center gap-2 rounded-full bg-black/35 px-2.5 py-1.5">
-              <button
-                type="button"
-                onClick={() => setPlaying((p) => !p)}
-                aria-label={playing ? 'Pause slideshow' : 'Play slideshow'}
-                className="grid h-5 w-5 place-items-center text-[11px] text-white"
-              >
-                <span aria-hidden="true">{playing ? '❚❚' : '▶'}</span>
-              </button>
               {slides.map((s, i) => (
                 <button
                   key={s.slug}
