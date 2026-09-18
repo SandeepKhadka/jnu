@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { site } from '@/content/site'
+import { LoginMenu } from './LoginMenu'
 import { MainNav } from './MainNav'
 
 /**
@@ -73,6 +74,7 @@ export function Header() {
             <Link href="/admission/download-forms/" className="btn btn-secondary">
               Downloads
             </Link>
+            <LoginMenu />
           </div>
         </div>
       </div>
