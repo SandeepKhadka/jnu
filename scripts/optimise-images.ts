@@ -56,7 +56,16 @@ async function buildSlides() {
 
   for (const s of slides) {
     for (const w of SLIDE_WIDTHS) {
-      const base = sharp(src(s.source)).resize({ width: w, withoutEnlargement: true })
+      const full = sharp(src(s.source))
+      const meta = await full.metadata()
+      // Crop BEFORE resizing, in its own pass: sharp would otherwise apply the
+      // extract after the resize, against the wrong dimensions.
+      const cropped = s.keepTopRows
+        ? await full
+            .extract({ left: 0, top: 0, width: meta.width ?? 1600, height: s.keepTopRows })
+            .toBuffer()
+        : await full.toBuffer()
+      const base = sharp(cropped).resize({ width: w, withoutEnlargement: true })
       const stem = path.join(dir, `${s.slug}-${w}`)
       await base.clone().avif({ quality: 50, effort: 6 }).toFile(`${stem}.avif`)
       await base.clone().webp({ quality: 72, effort: 6 }).toFile(`${stem}.webp`)

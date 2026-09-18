@@ -88,6 +88,8 @@ export function Hero() {
   )
 
   const rotating = playing && !hovered && !focused && slides.length > 1
+  /** A text banner is on screen: show it whole and move the caption aside. */
+  const onBanner = Boolean(slides[index]?.banner)
 
   useEffect(() => {
     if (!rotating) return
@@ -126,6 +128,7 @@ export function Hero() {
                 className={`absolute inset-0 transition-opacity duration-700 motion-reduce:transition-none ${
                   active ? 'opacity-100' : 'pointer-events-none opacity-0'
                 }`}
+                style={s.banner ? { background: s.banner.background } : undefined}
               >
                 {armed.has(i) ? (
                 <picture>
@@ -144,7 +147,9 @@ export function Hero() {
                     loading={i === 0 ? 'eager' : 'lazy'}
                     fetchPriority={i === 0 ? 'high' : 'low'}
                     decoding={i === 0 ? 'sync' : 'async'}
-                    className="h-full w-full object-cover object-center"
+                    // Photographs fill the frame; text banners are shown
+                    // whole, since cropping would cut their words off.
+                    className={`h-full w-full object-center ${s.banner ? 'object-contain' : 'object-cover'}`}
                   />
                 </picture>
                 ) : null}
@@ -156,7 +161,9 @@ export function Hero() {
         {/* Legibility shade under the caption on wide screens. */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 hidden bg-gradient-to-r from-jnu-900/75 via-jnu-900/25 to-transparent md:block"
+          className={`pointer-events-none absolute inset-0 hidden bg-gradient-to-r from-jnu-900/75 via-jnu-900/25 to-transparent transition-opacity duration-700 md:block ${
+            onBanner ? 'opacity-0' : 'opacity-100'
+          }`}
         />
 
         {slides.length > 1 ? (
@@ -213,7 +220,11 @@ export function Hero() {
         image on phones (the copy is taller than the mobile image, and
         overlaying it spilled onto the nav), over it from md up.
       */}
-      <div className="boxed relative z-[5] md:pointer-events-none md:absolute md:inset-y-0 md:left-0 md:right-0 md:flex md:items-center">
+      <div
+        className={`boxed relative z-[5] transition-opacity duration-700 md:pointer-events-none md:absolute md:inset-y-0 md:left-0 md:right-0 md:flex md:items-center ${
+          onBanner ? 'md:opacity-0 md:[&_*]:!pointer-events-none' : ''
+        }`}
+      >
         <Caption />
       </div>
     </section>

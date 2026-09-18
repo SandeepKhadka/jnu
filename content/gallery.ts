@@ -102,6 +102,17 @@ export type Slide = {
   enabled: boolean
   /** Why a slide is disabled, for whoever reads this file next. */
   heldBack?: string
+  /**
+   * Keep only the top N pixel rows of the original. Used to remove a part of
+   * the artwork the site cannot publish (see distance-education below).
+   */
+  keepTopRows?: number
+  /**
+   * Artwork with text in it rather than a photograph. Shown whole (contain,
+   * never cropped) on this background colour, and the hero caption steps
+   * aside while it is on screen so it does not cover the banner's own words.
+   */
+  banner?: { background: string }
 }
 
 /** Widths every slide is encoded at. The browser picks via srcset. */
@@ -114,14 +125,18 @@ export const slides: Slide[] = [
   {
     slug: 'distance-education',
     source: 'header_carousel_2.jpg',
-    enabled: false,
-    alt: 'Distance education programme banner listing B.Com, BBA, BCA and MBA',
-    heldBack:
-      'The artwork states "Courses Recognised by UGC-DEB". This site publishes no ' +
-      'recognition claim without current, dated evidence from the registrar (see ' +
-      'site.recognition). Set enabled: true once the UGC-DEB approval letter for the ' +
-      'current session is on file — and add the distance programmes to the catalogue, ' +
-      'since the slide advertises courses the site does not otherwise list.',
+    enabled: true,
+    alt: 'Jodhpur National University Distance Education Program — B.Com, BBA, BCA and MBA',
+    // The original banner ends in an orange strip reading "Courses Recognised
+    // by UGC-DEB". The site publishes no recognition claim without current,
+    // dated evidence from the registrar (see site.recognition), and at the
+    // time of writing only third-party listing sites asserted it. The strip
+    // starts at row 603 of the 1600x658 original (measured: rows 0-602 are the
+    // yellow ground, 603 onward the orange band), so the top 603 rows are
+    // kept. Once the UGC-DEB approval letter for the current session is on
+    // file, delete keepTopRows to restore the full banner.
+    keepTopRows: 603,
+    banner: { background: '#fbca2d' },
   },
 ]
 
