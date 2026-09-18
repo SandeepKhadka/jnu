@@ -1,34 +1,41 @@
 'use client'
 
 import { useState } from 'react'
-import { findCertificate, type CertificateRecord } from '@/lib/store'
+
+import { site } from '@/content/site'
+import { verifyCertificate, type CertificateRecord, type VerifyOutcome } from '@/lib/store'
 
 type State =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'found'; row: CertificateRecord }
-  | { kind: 'notfound'; no: string }
+  | { kind: 'done'; outcome: VerifyOutcome; roll: string }
 
 /**
- * Verification: a third party enters a certificate number and learns whether
- * it exists in the register. A number not on record returns NOT VERIFIED, and
- * a revoked one says so explicitly — the point of a register is that a
- * withdrawn credential must not read as valid.
+ * Verification by roll number + date of birth.
+ *
+ * A third party enters the pair and learns whether a certificate exists in the
+ * register and what its status is. A revoked certificate says so explicitly —
+ * the whole point of a register is that a withdrawn credential must not read
+ * as valid.
+ *
+ * The request is a POST, so the roll number and date of birth never appear in
+ * a URL, a browser history entry or a Referer header, and the route behind it
+ * is rate limited: unlike a certificate number, this pair is guessable.
  */
 export function CertificateVerify() {
-  const [no, setNo] = useState('')
+  const [roll, setRoll] = useState('')
+  const [dob, setDob] = useState('')
   const [state, setState] = useState<State>({ kind: 'idle' })
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
 
-    const value = no.trim().toUpperCase()
-    if (!value) return
+    const value = roll.trim().toUpperCase()
+    if (!value || !dob) return
 
     setState({ kind: 'loading' })
-    const row = await findCertificate(value)
-
-    setState(row ? { kind: 'found', row } : { kind: 'notfound', no: value })
+    const outcome = await verifyCertificate(value, dob)
+    setState({ kind: 'done', outcome, roll: value })
   }
 
   return (
@@ -36,65 +43,115 @@ export function CertificateVerify() {
       <form onSubmit={onSubmit} className="panel no-print mb-6">
         <h2 className="panel-head m-0">Verify a Certificate</h2>
         <div className="panel-body">
-          <label htmlFor="certno" className="mb-1.5 block text-[13px] font-semibold text-jnu-800">
-            Certificate Number
-          </label>
-          <div className="flex flex-wrap gap-2">
-            <input
-              id="certno"
-              type="text"
-              autoComplete="off"
-              required
-              maxLength={40}
-              value={no}
-              onChange={(e) => setNo(e.target.value)}
-              placeholder="JNU/DEG/2024/004512"
-              aria-describedby="certno-help"
-              className="w-full max-w-[320px] rounded border border-hair px-3 py-2 text-[14px] uppercase tracking-wide focus:border-jnu-400"
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="v-roll"
+                className="mb-1.5 block text-[13px] font-semibold text-jnu-800"
+              >
+                Roll Number
+              </label>
+              <input
+                id="v-roll"
+                type="text"
+                autoComplete="off"
+                required
+                maxLength={24}
+                value={roll}
+                onChange={(e) => setRoll(e.target.value)}
+                placeholder="JNU2024BT0147"
+                className="w-full rounded border border-hair px-3 py-2 text-[14px] uppercase tracking-wide focus:border-jnu-400"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="v-dob"
+                className="mb-1.5 block text-[13px] font-semibold text-jnu-800"
+              >
+                Date of Birth
+              </label>
+              <input
+                id="v-dob"
+                type="date"
+                required
+                value={dob}
+                onChange={(e) => setDob(e.target.value)}
+                max={new Date().toISOString().slice(0, 10)}
+                className="tnum w-full rounded border border-hair px-3 py-2 text-[14px] focus:border-jnu-400"
+              />
+            </div>
+          </div>
+
+          <p className="m-0 mt-3 text-xs text-muted">
+            Enter the roll number and date of birth exactly as they appear on the
+            certificate. Employers and institutions may use this service without an
+            account.
+          </p>
+
+          <p className="m-0 mt-4">
             <button type="submit" className="btn btn-primary" disabled={state.kind === 'loading'}>
               {state.kind === 'loading' ? 'Checking…' : 'Verify'}
             </button>
-          </div>
-          <p id="certno-help" className="m-0 mt-2 text-xs text-muted">
-            Enter the number exactly as printed on the certificate, including slashes.
-            Employers and institutions may use this service without an account.
           </p>
 
-          <p className="m-0 mt-3 rounded border border-hair bg-shell px-3 py-2 text-xs text-muted">
-            <strong className="text-jnu-800">Sample numbers: </strong>
-            <button type="button" onClick={() => setNo('JNU/DEG/2024/004512')} className="underline">
-              JNU/DEG/2024/004512
-            </button>
-            {' · '}
-            <button type="button" onClick={() => setNo('JNU/DEG/2022/003310')} className="underline">
-              JNU/DEG/2022/003310
-            </button>{' '}
-            (revoked)
-            {' · '}
-            <button type="button" onClick={() => setNo('JNU/DEG/2025/005190')} className="underline">
-              JNU/DEG/2025/005190
-            </button>{' '}
-            (withheld)
+          {/* Requested plainly on the page: where to write for a signed notice. */}
+          <p className="m-0 mt-4 rounded border border-hair bg-shell px-3 py-2 text-[13px] text-muted">
+            For a signed verification notice on university letterhead, write to{' '}
+            <a href={`mailto:${site.verificationEmail}`} className="font-semibold">
+              {site.verificationEmail}
+            </a>{' '}
+            quoting the roll number and date of birth.
           </p>
         </div>
       </form>
 
       <div aria-live="polite">
-        {state.kind === 'found' ? <Outcome row={state.row} /> : null}
-
-        {state.kind === 'notfound' ? (
-          <div className="panel border-l-[3px] border-l-[#a8322b] p-4">
-            <p className="m-0 text-[14px] font-semibold text-[#a8322b]">Not verified</p>
-            <p className="m-0 mt-1 text-[13px] text-muted">
-              Certificate number <span className="tnum font-semibold">{state.no}</span> is not
-              present in the university record. Check the number for transcription errors. If
-              it is correct as printed, contact the registrar via the{' '}
-              <a href="/contact/">contact page</a> before relying on the document.
-            </p>
-          </div>
-        ) : null}
+        {state.kind === 'done' ? <Result state={state} /> : null}
       </div>
+    </div>
+  )
+}
+
+function Result({ state }: { state: { outcome: VerifyOutcome; roll: string } }) {
+  const { outcome, roll } = state
+
+  if (outcome.kind === 'found') return <Outcome row={outcome.row} />
+
+  if (outcome.kind === 'error') {
+    return (
+      <div className="panel border-l-[3px] border-l-[#9a6a10] p-4">
+        <p className="m-0 text-[14px] font-semibold text-[#9a6a10]">Could not check</p>
+        <p className="m-0 mt-1 text-[13px] text-muted">{outcome.error}</p>
+      </div>
+    )
+  }
+
+  // A student on record but with nothing awarded yet is a different and more
+  // useful answer to an employer than "no such person".
+  if (outcome.kind === 'no-certificate') {
+    return (
+      <div className="panel border-l-[3px] border-l-[#9a6a10] p-4">
+        <p className="m-0 text-[14px] font-semibold text-[#9a6a10]">No certificate issued</p>
+        <p className="m-0 mt-1 text-[13px] text-muted">
+          Roll number <span className="tnum font-semibold">{roll}</span> is on the university
+          record, but no certificate has been issued against it. This is normal for a student
+          who has not yet completed their programme. For written confirmation, contact{' '}
+          <a href={`mailto:${site.verificationEmail}`}>{site.verificationEmail}</a>.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="panel border-l-[3px] border-l-[#a8322b] p-4">
+      <p className="m-0 text-[14px] font-semibold text-[#a8322b]">Not verified</p>
+      <p className="m-0 mt-1 text-[13px] text-muted">
+        No record matches roll number <span className="tnum font-semibold">{roll}</span> with
+        the date of birth given. Check both for transcription errors — the date of birth must
+        match the university record exactly. If they are correct as printed, contact{' '}
+        <a href={`mailto:${site.verificationEmail}`}>{site.verificationEmail}</a> before
+        relying on the document.
+      </p>
     </div>
   )
 }
@@ -153,7 +210,8 @@ function Outcome({ row }: { row: CertificateRecord }) {
         <p className="m-0 mt-4 text-xs text-muted">
           This response reflects the university record at the time of the query. It confirms
           the existence and status of a record only; it does not itself constitute a
-          certificate.
+          certificate. For a signed notice, write to{' '}
+          <a href={`mailto:${site.verificationEmail}`}>{site.verificationEmail}</a>.
         </p>
 
         <p className="no-print m-0 mt-4">

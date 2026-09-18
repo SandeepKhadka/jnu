@@ -18,3 +18,7 @@ Thumbs.db
 /dev.db-journal
 /prisma/dev.db
 /src/generated/
+
+# Uploaded documents (Aadhaar scans, photographs). Personal data — never
+# committed, and deliberately outside public/ so it is never served directly.
+/var/

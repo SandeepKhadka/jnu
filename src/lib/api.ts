@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { UnauthorizedError } from '@/lib/auth'
+import { StudentUnauthorizedError } from '@/lib/student-auth'
 
 /**
  * Shared response helpers so every route reports errors the same way and a
@@ -16,6 +17,7 @@ export function fail(message: string, status = 400) {
 
 export function handleError(e: unknown) {
   if (e instanceof UnauthorizedError) return fail('Not signed in.', 401)
+  if (e instanceof StudentUnauthorizedError) return fail('Not signed in.', 401)
 
   // Prisma unique-constraint violation.
   if (typeof e === 'object' && e !== null && 'code' in e && (e as { code: string }).code === 'P2002') {

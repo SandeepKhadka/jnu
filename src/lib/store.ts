@@ -166,14 +166,6 @@ function toCertificate(c: ApiCertificate): CertificateRecord {
 
 /* -------------------------------------------------------------- results --- */
 
-export async function findPublishedResults(rollNo: string): Promise<ResultRecord[]> {
-  const res = await api<{ results: ApiResult[] }>(
-    `/api/results/lookup?roll=${encodeURIComponent(rollNo.trim().toUpperCase())}`
-  )
-  if (!res.ok) return []
-  return res.data.results.map(toResult)
-}
-
 export async function listResults(): Promise<ResultRecord[]> {
   const res = await api<{ results: ApiResult[] }>('/api/results')
   if (!res.ok) return []
@@ -367,4 +359,106 @@ export async function submitEnquiry(input: {
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const res = await api('/api/enquiries', { method: 'POST', body: JSON.stringify(input) })
   return res.ok ? { ok: true } : res
+}
+
+/* -------------------------------------------------------------- student --- */
+
+export type StudentProfile = {
+  rollNo: string
+  enrollmentNo: string
+  fullName: string
+  fatherName: string
+  motherName: string
+  dob: string
+  programme: string
+  photoUrl: string | null
+  status: string
+}
+
+export type StudentPortal = {
+  student: StudentProfile | null
+  results: ResultRecord[]
+}
+
+export async function studentSignIn(
+  rollNo: string,
+  dob: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await api<{ student: unknown }>('/api/student/login', {
+    method: 'POST',
+    body: JSON.stringify({ rollNo, dob }),
+  })
+  return res.ok ? { ok: true } : res
+}
+
+export async function studentSignOut(): Promise<void> {
+  await api('/api/student/logout', { method: 'POST' })
+}
+
+/**
+ * The signed-in student's own record. There is no roll-number parameter by
+ * design — the server reads it from the session cookie, so changing a value
+ * in the browser cannot fetch somebody else's marksheet.
+ */
+export async function getStudentPortal(): Promise<StudentPortal> {
+  const res = await api<{ student: StudentProfile | null; results?: ApiResult[] }>(
+    '/api/student/me'
+  )
+  if (!res.ok || !res.data.student) return { student: null, results: [] }
+  return {
+    student: res.data.student,
+    results: (res.data.results ?? []).map(toResult),
+  }
+}
+
+/* --------------------------------------------------- certificate verify --- */
+
+export type VerifyOutcome =
+  | { kind: 'found'; row: CertificateRecord }
+  | { kind: 'no-certificate' }
+  | { kind: 'not-found' }
+  | { kind: 'error'; error: string }
+
+/**
+ * Verification by roll number + date of birth.
+ *
+ * A POST, not a GET: the pair is a guessable credential, and a query string
+ * would put it in server logs, browser history and Referer headers.
+ */
+export async function verifyCertificate(rollNo: string, dob: string): Promise<VerifyOutcome> {
+  const res = await api<{ certificate: ApiCertificate | null; studentOnRecord?: boolean }>(
+    '/api/certificates/verify',
+    { method: 'POST', body: JSON.stringify({ rollNo, dob }) }
+  )
+
+  if (!res.ok) return { kind: 'error', error: res.error }
+  if (res.data.certificate) return { kind: 'found', row: toCertificate(res.data.certificate) }
+  if (res.data.studentOnRecord) return { kind: 'no-certificate' }
+  return { kind: 'not-found' }
+}
+
+/* ---------------------------------------------------------- application --- */
+
+/**
+ * Submits the admission form. Takes a FormData rather than a plain object
+ * because three documents ride along with it, so this bypasses the JSON
+ * `api()` helper above.
+ */
+export async function submitApplication(
+  form: FormData
+): Promise<{ ok: true; applicationNo: string | null } | { ok: false; error: string }> {
+  try {
+    const res = await fetch('/api/applications/', {
+      method: 'POST',
+      body: form,
+      credentials: 'same-origin',
+      // No Content-Type header: the browser must set it with the multipart
+      // boundary, and setting it by hand breaks the upload.
+    })
+    const body = await res.json().catch(() => null)
+    if (!res.ok) return { ok: false, error: body?.error ?? `Submission failed (${res.status}).` }
+    return { ok: true, applicationNo: body?.applicationNo ?? null }
+  } catch {
+    return { ok: false, error: 'Could not reach the server. Check your connection.' }
+  }
 }

@@ -208,3 +208,61 @@ export const demoStaff = [
   { email: 'admin@jnu.local', password: 'jnu@2026', full_name: 'Dr. S. K. Sharma', role: 'registrar' as const },
   { email: 'exam@jnu.local', password: 'exam@2026', full_name: 'Smt. R. Deora', role: 'exam_cell' as const },
 ]
+
+/* ---------------------------------------------------------------- students --- */
+
+export type StudentSeed = {
+  roll_no: string
+  enrollment_no: string
+  full_name: string
+  father_name: string
+  mother_name: string
+  /** `YYYY-MM-DD` — half of the login credential, so never a Date. */
+  dob: string
+  programme: string
+  status: 'ACTIVE' | 'GRADUATED' | 'WITHDRAWN'
+  /** Certificate numbers held by this student, for linking the register. */
+  certificates?: string[]
+}
+
+/**
+ * The student register.
+ *
+ * Covers every roll number in seedResults, plus a row for each holder in
+ * seedCertificates so that verification by roll number + date of birth has
+ * something to match. Certificates previously carried only an enrollment
+ * number, so their roll numbers are assigned here.
+ *
+ * These are fictional people for development. Replace the whole list with the
+ * registrar's export before launch — and note that none of these dates of
+ * birth should ever exist in a production database, since they are published
+ * in this repository and are half of a login credential.
+ */
+export const seedStudents: StudentSeed[] = [
+  // --- holders of published results ---
+  { roll_no: 'JNU2024BT0147', enrollment_no: 'JNU/2024/BT/1147', full_name: 'Rajesh Kumar Meena', father_name: 'Shyam Lal Meena', mother_name: 'Kamla Devi Meena', dob: '2005-04-12', programme: 'B.Tech Computer Science & Engineering', status: 'ACTIVE' },
+  { roll_no: 'JNU2024BT0152', enrollment_no: 'JNU/2024/BT/1152', full_name: 'Priya Sharma', father_name: 'Mahesh Sharma', mother_name: 'Sunita Sharma', dob: '2005-08-30', programme: 'B.Tech Computer Science & Engineering', status: 'ACTIVE' },
+  { roll_no: 'JNU2024BT0301', enrollment_no: 'JNU/2024/CE/0301', full_name: 'Mohammed Arif Khan', father_name: 'Iqbal Khan', mother_name: 'Nasreen Bano', dob: '2004-11-19', programme: 'B.Tech Civil Engineering', status: 'ACTIVE' },
+  { roll_no: 'JNU2025MB0088', enrollment_no: 'JNU/2025/MB/0088', full_name: 'Anjali Rathore', father_name: 'Bhanwar Singh Rathore', mother_name: 'Pushpa Kanwar', dob: '2002-02-07', programme: 'Master of Business Administration', status: 'ACTIVE' },
+  { roll_no: 'JNU2024BP0219', enrollment_no: 'JNU/2024/BP/0219', full_name: 'Vikram Singh Bhati', father_name: 'Devi Singh Bhati', mother_name: 'Sushila Kanwar', dob: '2005-01-25', programme: 'Bachelor of Pharmacy', status: 'ACTIVE' },
+  { roll_no: 'JNU2025CA0410', enrollment_no: 'JNU/2025/CA/0410', full_name: 'Sneha Vishnoi', father_name: 'Rakesh Vishnoi', mother_name: 'Manju Vishnoi', dob: '2006-06-14', programme: 'Bachelor of Computer Applications', status: 'ACTIVE' },
+  { roll_no: 'JNU2024LW0075', enrollment_no: 'JNU/2024/LW/0075', full_name: 'Karan Purohit', father_name: 'Girdhari Lal Purohit', mother_name: 'Lalita Purohit', dob: '2003-09-03', programme: 'Bachelor of Laws', status: 'ACTIVE' },
+  { roll_no: 'JNU2024BT0166', enrollment_no: 'JNU/2024/BT/1166', full_name: 'Deepak Choudhary', father_name: 'Ram Niwas Choudhary', mother_name: 'Santosh Devi', dob: '2005-03-21', programme: 'B.Tech Computer Science & Engineering', status: 'ACTIVE' },
+
+  // --- results withheld from publication ---
+  { roll_no: 'JNU2024BT0171', enrollment_no: 'JNU/2024/BT/1171', full_name: 'Neha Agarwal', father_name: 'Sunil Agarwal', mother_name: 'Rekha Agarwal', dob: '2005-07-08', programme: 'B.Tech Computer Science & Engineering', status: 'ACTIVE' },
+  { roll_no: 'JNU2024BT0180', enrollment_no: 'JNU/2024/ME/0180', full_name: 'Suresh Bishnoi', father_name: 'Hanuman Ram Bishnoi', mother_name: 'Bhanwari Devi', dob: '2004-12-30', programme: 'B.Tech Mechanical Engineering', status: 'ACTIVE' },
+
+  // --- certificate holders (graduated) ---
+  { roll_no: 'JNU2020BT1187', enrollment_no: 'JNU/2020/BT/1187', full_name: 'Rohit Suthar', father_name: 'Prakash Suthar', mother_name: 'Geeta Suthar', dob: '2002-05-16', programme: 'B.Tech Computer Science & Engineering', status: 'GRADUATED', certificates: ['JNU/DEG/2024/004512'] },
+  { roll_no: 'JNU2022MB0341', enrollment_no: 'JNU/2022/MB/0341', full_name: 'Kavita Parihar', father_name: 'Narendra Parihar', mother_name: 'Shobha Parihar', dob: '2000-10-09', programme: 'Master of Business Administration', status: 'GRADUATED', certificates: ['JNU/DEG/2024/004518'] },
+  { roll_no: 'JNU2019BP0812', enrollment_no: 'JNU/2019/BP/0812', full_name: 'Imran Sheikh', father_name: 'Abdul Rashid Sheikh', mother_name: 'Shabana Sheikh', dob: '2001-03-27', programme: 'Bachelor of Pharmacy', status: 'GRADUATED', certificates: ['JNU/DEG/2023/003994'] },
+  { roll_no: 'JNU2020LW0233', enrollment_no: 'JNU/2020/LW/0233', full_name: 'Pooja Chouhan', father_name: 'Mangi Lal Chouhan', mother_name: 'Kailash Devi', dob: '2001-12-02', programme: 'Bachelor of Laws', status: 'GRADUATED', certificates: ['JNU/DEG/2023/004021'] },
+  { roll_no: 'JNU2022CA0604', enrollment_no: 'JNU/2022/CA/0604', full_name: 'Aditya Vyas', father_name: 'Dinesh Vyas', mother_name: 'Anita Vyas', dob: '2003-07-11', programme: 'Bachelor of Computer Applications', status: 'GRADUATED', certificates: ['JNU/DEG/2025/005107'] },
+  { roll_no: 'JNU2023MS0119', enrollment_no: 'JNU/2023/MS/0119', full_name: 'Meenakshi Joshi', father_name: 'Ashok Joshi', mother_name: 'Nirmala Joshi', dob: '2001-09-23', programme: 'Master of Science', status: 'GRADUATED', certificates: ['JNU/DEG/2025/005142'] },
+
+  // Revoked — verification must report this plainly rather than stay silent.
+  { roll_no: 'JNU2018CE0455', enrollment_no: 'JNU/2018/CE/0455', full_name: 'Sanjay Tak', father_name: 'Bheru Lal Tak', mother_name: 'Sita Devi Tak', dob: '2000-01-18', programme: 'B.Tech Civil Engineering', status: 'GRADUATED', certificates: ['JNU/DEG/2022/003310'] },
+  // Withheld — under review by the examination cell.
+  { roll_no: 'JNU2023BE0287', enrollment_no: 'JNU/2023/BE/0287', full_name: 'Farhan Qureshi', father_name: 'Mohammed Yusuf Qureshi', mother_name: 'Rukhsana Begum', dob: '2001-06-05', programme: 'Bachelor of Education', status: 'GRADUATED', certificates: ['JNU/DEG/2025/005190'] },
+]

@@ -33,6 +33,17 @@ export const site = {
   },
 
   email: 'info@jodhpurnationaluniversity.co.in',
+
+  /**
+   * Shown on the certificate verification page, for an employer or institution
+   * that needs a signed verification notice rather than the on-screen result.
+   *
+   * SET THIS TO THE OFFICE ADDRESS THAT IS ACTUALLY MONITORED. It is published
+   * on a public page, so it will be scraped; an address nobody reads is worse
+   * than none, because a verification request that goes unanswered reads as
+   * the university refusing to confirm its own record.
+   */
+  verificationEmail: 'jnuverification@gmail.com',
   phone: '',
 
   social: {
