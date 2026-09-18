@@ -60,8 +60,25 @@ function gradeFor(pct: number): string {
   return 'F'
 }
 
-function subject(code: string, name: string, obtained: number, max = 100): Subject {
-  return { code, name, max, obtained, grade: gradeFor((obtained / max) * 100) }
+/**
+ * `practical`, when given, is the practical component of `obtained`; the
+ * statement of marks prints theory = obtained - practical in its own column.
+ */
+function subject(
+  code: string,
+  name: string,
+  obtained: number,
+  max = 100,
+  practical?: number
+): Subject {
+  return {
+    code,
+    name,
+    max,
+    obtained,
+    grade: gradeFor((obtained / max) * 100),
+    ...(practical !== undefined ? { theory: obtained - practical, practical } : {}),
+  }
 }
 
 function totals(subjects: Subject[]) {
@@ -75,11 +92,11 @@ function totals(subjects: Subject[]) {
 
 const CS_SEM4 = [
   subject('CS401', 'Design & Analysis of Algorithms', 78),
-  subject('CS402', 'Operating Systems', 71),
+  subject('CS402', 'Operating Systems', 71, 100, 22),
   subject('CS403', 'Database Management Systems', 84),
-  subject('CS404', 'Computer Networks', 66),
+  subject('CS404', 'Computer Networks', 66, 100, 20),
   subject('CS405', 'Software Engineering', 74),
-  subject('CS406', 'DBMS Laboratory', 88, 50),
+  subject('CS406', 'DBMS Laboratory', 44, 50),
 ]
 
 const CS_SEM4_B = [

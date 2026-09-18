@@ -1,6 +1,8 @@
 import { db } from '@/lib/db'
 import { ok, fail, handleError, readJson } from '@/lib/api'
 import { getStudentSession, requireStudent } from '@/lib/student-auth'
+import { ensureVerifyTokens } from '@/lib/marksheet-token'
+import { formatSerial } from '@/lib/marksheet'
 import { isEmail, isIndianState, isPincode, normaliseMobile } from '@/lib/validate'
 
 export const dynamic = 'force-dynamic'
@@ -67,6 +69,8 @@ export async function GET() {
           marksMax: true,
           sgpa: true,
           status: true,
+          publishedAt: true,
+          verifyToken: true,
         },
       }),
       db.correctionRequest.findMany({
@@ -87,6 +91,9 @@ export async function GET() {
 
     const { photoId, pendingPhotoId, pendingPhotoAt, ...rest } = student
 
+    // Every sheet the student can print must carry a serial that verifies.
+    const tokens = await ensureVerifyTokens(results)
+
     return ok({
       student: {
         ...rest,
@@ -96,7 +103,15 @@ export async function GET() {
         pendingPhotoUrl: pendingPhotoId ? `/api/uploads/${pendingPhotoId}/` : null,
         pendingPhotoAt: pendingPhotoAt?.toISOString() ?? null,
       },
-      results: results.map((r) => ({ ...r, subjects: JSON.parse(r.subjects) })),
+      results: results.map(({ verifyToken: _t, publishedAt, ...r }) => {
+        const token = tokens.get(r.id)
+        return {
+          ...r,
+          subjects: JSON.parse(r.subjects),
+          publishedAt: publishedAt?.toISOString() ?? null,
+          serial: token ? formatSerial(token) : null,
+        }
+      }),
       corrections: corrections.map((c) => ({ ...c, createdAt: c.createdAt.toISOString() })),
     })
   } catch (e) {

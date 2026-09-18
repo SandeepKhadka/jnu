@@ -165,7 +165,13 @@ function Outcome({ row }: { row: CertificateRecord }) {
         : { c: '#9a6a10', label: 'Withheld' }
 
   return (
-    <article className="panel" style={{ borderLeft: `3px solid ${tone.c}` }}>
+    // data-print-scope: printing this page prints only this result — no site
+    // header, navigation, footer or explanatory text (see globals.css).
+    <article
+      className="panel"
+      style={{ borderLeft: `3px solid ${tone.c}` }}
+      data-print-scope
+    >
       <h2 className="panel-head m-0 flex flex-wrap items-center justify-between gap-2">
         <span>Verification Result</span>
         <span

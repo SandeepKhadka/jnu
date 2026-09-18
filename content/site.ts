@@ -57,6 +57,23 @@ export const site = {
   established: '2008',
 
   /**
+   * Printed on the statement of marks.
+   *
+   * signatureImage: path under /public to the Controller of Examinations'
+   * scanned signature, e.g. '/images/coe-signature.png'. Leave EMPTY until the
+   * examination cell supplies the real one — the sheet then prints a blank
+   * signature line. A signature must never be drawn, traced or borrowed from
+   * another document: on a statement of marks that is forgery, whoever does it.
+   */
+  examinations: {
+    controllerTitle: 'Controller of Examinations',
+    signatureImage: '',
+    place: 'Jodhpur, Rajasthan',
+    /** Printed as "Centre Name". Campus students sit examinations on campus. */
+    centre: 'Main Campus',
+  },
+
+  /**
    * Shown in the footer and on the accreditation page.
    * IMPORTANT: leave blank until the registrar supplies current, dated evidence.
    * Never publish a recognition claim that cannot be evidenced on request.

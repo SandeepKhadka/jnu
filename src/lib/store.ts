@@ -22,6 +22,13 @@ export type Subject = {
   max: number
   obtained: number
   grade: string
+  /**
+   * Optional theory / practical split, shown in separate columns on the
+   * printed statement. Stored inside the subjects JSON, so rows written before
+   * the split existed simply omit them and print their total as theory.
+   */
+  theory?: number
+  practical?: number
 }
 
 export type ResultRecord = {
@@ -37,6 +44,10 @@ export type ResultRecord = {
   sgpa: number
   status: 'PASS' | 'FAIL' | 'ATKT' | 'WITHHELD'
   published: boolean
+  /** ISO timestamp the exam cell published it — the "Dated" line. */
+  published_at?: string | null
+  /** Printed serial, e.g. JNU-SOM-7K3M-Q9XA-2BCD. Encoded in the QR code. */
+  serial?: string | null
 }
 
 export type CertificateRecord = {
@@ -117,6 +128,8 @@ type ApiResult = {
   sgpa: number
   status: ResultRecord['status']
   published?: boolean
+  publishedAt?: string | null
+  serial?: string | null
 }
 
 function toResult(r: ApiResult): ResultRecord {
@@ -133,6 +146,8 @@ function toResult(r: ApiResult): ResultRecord {
     sgpa: r.sgpa,
     status: r.status,
     published: r.published ?? true,
+    published_at: r.publishedAt ?? null,
+    serial: r.serial ?? null,
   }
 }
 
@@ -618,4 +633,38 @@ export async function submitApplication(
   } catch {
     return { ok: false, error: 'Could not reach the server. Check your connection.' }
   }
+}
+
+/* ------------------------------------------------------ marksheet verify --- */
+
+export type VerifiedMarksheet = {
+  serial: string
+  rollNo: string
+  enrollmentNo: string | null
+  studentName: string
+  programme: string
+  semester: string
+  examSession: string
+  subjects: Subject[]
+  marksObtained: number
+  marksMax: number
+  status: ResultRecord['status']
+  publishedAt: string | null
+}
+
+export type MarksheetVerifyOutcome =
+  | { kind: 'found'; sheet: VerifiedMarksheet }
+  | { kind: 'withdrawn' }
+  | { kind: 'not-found' }
+  | { kind: 'error'; error: string }
+
+/** Looks up a printed statement of marks by the serial on it. */
+export async function verifyMarksheet(serial: string): Promise<MarksheetVerifyOutcome> {
+  const res = await api<{ marksheet: VerifiedMarksheet | null; withdrawn?: boolean }>(
+    `/api/results/verify?sn=${encodeURIComponent(serial.trim())}`
+  )
+  if (!res.ok) return { kind: 'error', error: res.error }
+  if (res.data.marksheet) return { kind: 'found', sheet: res.data.marksheet }
+  if (res.data.withdrawn) return { kind: 'withdrawn' }
+  return { kind: 'not-found' }
 }

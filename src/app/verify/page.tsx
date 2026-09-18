@@ -72,36 +72,38 @@ export default function VerifyPage() {
       >
         <CertificateVerify />
 
-        <h2>How verification works</h2>
-        <p>
-          Records in this service are entered from the registrar&rsquo;s authoritative
-          issuance register. A query returns one of three outcomes:{' '}
-          <strong>Verified</strong> — the certificate is present in the record and in good
-          standing; <strong>Revoked</strong> — it was issued and later withdrawn, and must
-          not be accepted; <strong>Withheld</strong> — the record is under review.
-        </p>
-        <p>
-          Where no record matches, the service returns <strong>Not verified</strong>. Because
-          that can result from a simple transcription error as easily as from a document that
-          was never issued, please write to{' '}
-          <a href={`mailto:${site.verificationEmail}`}>{site.verificationEmail}</a> before
-          drawing a conclusion. Where a roll number is on record but nothing has been awarded
-          against it, the service says so explicitly rather than reporting a failure.
-        </p>
-        <p>
-          To protect the people in the register, the service is rate limited and does not
-          reveal which half of a failed query was wrong.
-        </p>
+        <div className="no-print">
+          <h2>How verification works</h2>
+          <p>
+            Records in this service are entered from the registrar&rsquo;s authoritative
+            issuance register. A query returns one of three outcomes:{' '}
+            <strong>Verified</strong> — the certificate is present in the record and in good
+            standing; <strong>Revoked</strong> — it was issued and later withdrawn, and must
+            not be accepted; <strong>Withheld</strong> — the record is under review.
+          </p>
+          <p>
+            Where no record matches, the service returns <strong>Not verified</strong>. Because
+            that can result from a simple transcription error as easily as from a document that
+            was never issued, please write to{' '}
+            <a href={`mailto:${site.verificationEmail}`}>{site.verificationEmail}</a> before
+            drawing a conclusion. Where a roll number is on record but nothing has been awarded
+            against it, the service says so explicitly rather than reporting a failure.
+          </p>
+          <p>
+            To protect the people in the register, the service is rate limited and does not
+            reveal which half of a failed query was wrong.
+          </p>
 
-        <h2>Frequently asked questions</h2>
-        <dl className="m-0 grid gap-5 md:grid-cols-2">
-          {faqs.map((f) => (
-            <div key={f.q}>
-              <dt className="mb-1 font-semibold text-jnu-800">{f.q}</dt>
-              <dd className="m-0 text-[13.5px] leading-relaxed text-muted">{f.a}</dd>
-            </div>
-          ))}
-        </dl>
+          <h2>Frequently asked questions</h2>
+          <dl className="m-0 grid gap-5 md:grid-cols-2">
+            {faqs.map((f) => (
+              <div key={f.q}>
+                <dt className="mb-1 font-semibold text-jnu-800">{f.q}</dt>
+                <dd className="m-0 text-[13.5px] leading-relaxed text-muted">{f.a}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
       </PageShell>
     </>
   )

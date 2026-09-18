@@ -234,8 +234,90 @@
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  @page {
-    size: A4 landscape;
-    margin: 8mm;
+
+  /*
+   * Page size per document, via CSS named pages.
+   *
+   * This was a bare `@page { size: A4 landscape }`, which applied to every
+   * print from the site — someone printing the admission process page got it
+   * sideways. Named pages scope each size to the element that needs it; any
+   * other print falls back to the browser's portrait default.
+   */
+  .cert-sheet {
+    page: cert;
   }
+  .ms-sheet {
+    page: marksheet;
+  }
+
+  /*
+   * Statement of marks. Same isolation as the certificate: #sheet-overlay is
+   * portalled to <body>, so hiding body's other children leaves the sheet
+   * alone — no site header, navigation, footer or portal page behind it.
+   */
+  body.sheet-printing > *:not(#sheet-overlay) {
+    display: none !important;
+  }
+  body.sheet-printing #sheet-overlay {
+    position: static !important;
+    inset: auto !important;
+    z-index: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+    padding: 0 !important;
+  }
+  body.sheet-printing .sheet-scroll {
+    overflow: visible !important;
+  }
+  body.sheet-printing * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /*
+   * The sheet is designed at true A4, 210 x 297 mm. Printers cannot print to
+   * the paper edge, so it is SCALED into the printable area inside the 6mm
+   * page margin (198/210 = 0.943) rather than resized. Resizing made the
+   * layout reflow narrower and taller — names and totals wrapped and the last
+   * line was pushed off the page. `zoom`, unlike transform, also shrinks the
+   * layout box, so the page sees a sheet that fits and prints exactly one page.
+   */
+  body.sheet-printing .ms-sheet {
+    zoom: 0.94;
+    margin: 0 !important;
+    break-inside: avoid;
+  }
+
+  /*
+   * Scoped printing for an element marked [data-print-scope] — used by the
+   * certificate verification result. Everything outside <main> is removed and
+   * everything inside it hidden except the scoped element, which is lifted to
+   * the top of the page. Applies to Ctrl+P as well as the Print button, since
+   * it keys off the element being present rather than off a click.
+   */
+  body:has([data-print-scope]) > *:not(main) {
+    display: none !important;
+  }
+  body:has([data-print-scope]) main * {
+    visibility: hidden;
+  }
+  body:has([data-print-scope]) [data-print-scope],
+  body:has([data-print-scope]) [data-print-scope] * {
+    visibility: visible;
+  }
+  body:has([data-print-scope]) [data-print-scope] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}
+
+@page cert {
+  size: A4 landscape;
+  margin: 8mm;
+}
+
+@page marksheet {
+  size: A4 portrait;
+  margin: 6mm;
 }

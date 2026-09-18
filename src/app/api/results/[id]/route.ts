@@ -1,6 +1,7 @@
 import { db } from '@/lib/db'
 import { requireStaff, audit } from '@/lib/auth'
 import { ok, fail, handleError, readJson } from '@/lib/api'
+import { newVerifyToken } from '@/lib/marksheet-token'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,6 +21,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       data: {
         published: body.published,
         publishedAt: body.published ? new Date() : null,
+        // The serial is issued on first publication and then kept for good,
+        // including across unpublish/republish: a sheet already printed with
+        // it must still verify against the same record.
+        ...(body.published && !existing.verifyToken ? { verifyToken: newVerifyToken() } : {}),
       },
     })
 

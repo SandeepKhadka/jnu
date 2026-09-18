@@ -16,6 +16,7 @@ import {
   onStudentSessionChanged,
 } from '@/lib/student-session-events'
 import { ProfilePanel } from './ProfilePanel'
+import { MarksheetOverlay } from './MarksheetOverlay'
 
 /**
  * Student portal: sign in with roll number + date of birth, then see your own
@@ -34,6 +35,9 @@ export function StudentPortal() {
   const [results, setResults] = useState<ResultRecord[]>([])
   const [corrections, setCorrections] = useState<CorrectionRequest[]>([])
   const [checking, setChecking] = useState(true)
+  /** The result whose printable statement is open, if any. */
+  const [sheet, setSheet] = useState<ResultRecord | null>(null)
+  const closeSheet = useCallback(() => setSheet(null), [])
 
   const refresh = useCallback(async () => {
     const data = await getStudentPortal()
@@ -93,8 +97,12 @@ export function StudentPortal() {
           once the examination cell declares them.
         </p>
       ) : (
-        results.map((r) => <Marksheet key={r.id} row={r} profile={profile} />)
+        results.map((r) => (
+          <Marksheet key={r.id} row={r} profile={profile} onDownload={() => setSheet(r)} />
+        ))
       )}
+
+      {sheet ? <MarksheetOverlay row={sheet} profile={profile} onClose={closeSheet} /> : null}
     </div>
   )
 }
@@ -191,7 +199,15 @@ function SignInForm({
 
 /* ----------------------------------------------------------- marksheet --- */
 
-function Marksheet({ row, profile }: { row: ResultRecord; profile: StudentProfile }) {
+function Marksheet({
+  row,
+  profile,
+  onDownload,
+}: {
+  row: ResultRecord
+  profile: StudentProfile
+  onDownload: () => void
+}) {
   const subjects = Array.isArray(row.subjects) ? row.subjects : []
   const pct = row.marks_max > 0 ? (row.marks_obtained / row.marks_max) * 100 : 0
 
@@ -290,10 +306,13 @@ function Marksheet({ row, profile }: { row: ResultRecord; profile: StudentProfil
           substitute for the official marksheet issued by the examination cell.
         </p>
 
-        <p className="no-print m-0 mt-4">
-          <button type="button" onClick={() => window.print()} className="btn btn-secondary">
-            Print
+        <p className="no-print m-0 mt-4 flex flex-wrap items-center gap-3">
+          <button type="button" onClick={onDownload} className="btn btn-primary">
+            Download marksheet
           </button>
+          {row.serial ? (
+            <span className="tnum text-[12px] text-muted">Sr. No. {row.serial}</span>
+          ) : null}
         </p>
       </div>
     </article>
