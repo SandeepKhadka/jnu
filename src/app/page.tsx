@@ -120,7 +120,7 @@ export default function HomePage() {
           {faculties.map((f) => (
             <Link
               key={f.slug}
-              href={`/faculty/${f.slug}/`}
+              href={`/programmes/${f.slug}/`}
               className="panel block p-4 no-underline transition-shadow hover:shadow-raised"
             >
               <span className="mb-1 block font-display text-[14px] uppercase tracking-wide text-jnu-800">

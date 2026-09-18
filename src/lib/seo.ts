@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { site } from '@/content/site'
-import { faculties, type Programme } from '@/content/programmes'
+import { publishedFaculties, type Programme } from '@/content/programmes'
 
 /**
  * Every page builds its metadata through here, so canonical URLs, OG tags and
@@ -165,7 +165,7 @@ export function indexableRoutes(): string[] {
     '/about/accreditation/',
     '/about/achievers/',
     '/about/community-programme/',
-    '/faculty/',
+    '/programmes/',
     '/admission/',
     '/admission/process/',
     '/admission/eligibility/',
@@ -184,9 +184,12 @@ export function indexableRoutes(): string[] {
     '/photo-tour/',
     '/career/',
     '/contact/',
+    '/privacy/',
   ]
 
-  const facultyRoutes = faculties.map((f) => `/faculty/${f.slug}/`)
+  // Only faculties with a real programme list. An empty one is served
+  // noindex by the page itself, so including it here would contradict that.
+  const facultyRoutes = publishedFaculties.map((f) => `/programmes/${f.slug}/`)
 
   return [...staticRoutes, ...facultyRoutes]
 }

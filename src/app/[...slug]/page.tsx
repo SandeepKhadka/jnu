@@ -10,7 +10,7 @@ import { pageMetadata } from '@/lib/seo'
 /**
  * Renders every static content page from content/pages.ts.
  *
- * Next.js resolves explicit routes (/results, /verify, /admin, /faculty/[slug])
+ * Next.js resolves explicit routes (/results, /verify, /admin, /programmes/[slug])
  * ahead of this catch-all, so those are unaffected.
  */
 
@@ -62,7 +62,7 @@ export default async function ContentRoute({ params }: { params: Promise<{ slug?
       ))}
 
       {/* The faculty index gets its real listing rendered from the catalogue. */}
-      {page.path === '/faculty/' ? <FacultyIndex /> : null}
+      {page.path === '/programmes/' ? <FacultyIndex /> : null}
     </PageShell>
   )
 }
@@ -138,7 +138,7 @@ function FacultyIndex() {
       {faculties.map((f) => (
         <Link
           key={f.slug}
-          href={`/faculty/${f.slug}/`}
+          href={`/programmes/${f.slug}/`}
           className="panel block p-4 no-underline transition-shadow hover:shadow-raised"
         >
           <span className="mb-1 block font-display text-[15px] uppercase tracking-wide text-jnu-800">

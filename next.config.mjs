@@ -1,3 +1,5 @@
+import { redirects, securityHeaders } from './config/redirects.mjs'
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // NOT a static export any more: the app has API routes and a database, so
@@ -17,6 +19,17 @@ const nextConfig = {
   // This folder sits under a parent directory that also has a lockfile;
   // pin the tracing root so Next does not infer the wrong workspace.
   outputFileTracingRoot: import.meta.dirname,
+
+  // 301s from the old site and the security headers. These previously lived
+  // only in public/_headers and public/_redirects, which are Netlify syntax
+  // and are inert on a Node host — see config/redirects.mjs.
+  async redirects() {
+    return redirects
+  },
+
+  async headers() {
+    return securityHeaders
+  },
 
   reactStrictMode: true,
   poweredByHeader: false,

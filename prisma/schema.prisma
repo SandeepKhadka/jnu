@@ -32,24 +32,30 @@ model Staff {
 
 /// One examination result for a student, in one semester, in one session.
 model Result {
-  id           String    @id @default(cuid())
-  rollNo       String
-  studentName  String
-  programme    String
-  semester     String
-  examSession  String
+  id            String    @id @default(cuid())
+  rollNo        String
+  studentName   String
+  programme     String
+  semester      String
+  examSession   String
   /// Subject rows as JSON — SQLite has no native JSON column type.
-  subjects     String    @default("[]")
-  marksObtained Int      @default(0)
-  marksMax     Int       @default(0)
-  sgpa         Float     @default(0)
+  subjects      String    @default("[]")
+  marksObtained Int       @default(0)
+  marksMax      Int       @default(0)
+  sgpa          Float     @default(0)
   /// PASS | FAIL | ATKT | WITHHELD
-  status       String    @default("PASS")
+  status        String    @default("PASS")
   /// Nothing is visible to students until the exam cell publishes it.
-  published    Boolean   @default(false)
-  publishedAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  published     Boolean   @default(false)
+  publishedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  /// Set once the roll number matches a row in Student. Nullable because the
+  /// exam cell can import results before the student register is populated;
+  /// the lookup falls back to rollNo when it is null.
+  studentId String?
+  student   Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
 
   // A student sits a given semester in a given session exactly once.
   @@unique([rollNo, semester, examSession])
@@ -74,19 +80,26 @@ model Certificate {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  /// Verification is now by roll number + date of birth, so the register has
+  /// to carry the roll number as well as the certificate number.
+  rollNo    String?
+  studentId String?
+  student   Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+
   @@index([certificateNo])
+  @@index([rollNo])
 }
 
 /// Append-only trail. Results and certificates are the records most worth
 /// tampering with, so every write is logged with who did it.
 model AuditLog {
-  id        String   @id @default(cuid())
-  actorId   String?
-  actor     Staff?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      Staff?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
   actorEmail String
-  action    String
-  detail    String
-  at        DateTime @default(now())
+  action     String
+  detail     String
+  at         DateTime @default(now())
 
   @@index([at])
 }
@@ -103,4 +116,145 @@ model Enquiry {
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+}
+
+/// The student register.
+///
+/// Keystone for three public features that previously had nothing to stand on:
+/// student login, certificate verification by roll number, and the fuller
+/// marksheet. Before this, Result carried a roll number but no date of birth,
+/// and Certificate carried an enrollment number but no roll number, so none of
+/// the three could be answered.
+model Student {
+  id           String  @id @default(cuid())
+  rollNo       String  @unique
+  enrollmentNo String  @unique
+  fullName     String
+  fatherName   String
+  motherName   String
+  /// Stored as a plain `YYYY-MM-DD` string, deliberately NOT DateTime.
+  ///
+  /// It is half of a login credential, so it is only ever compared for exact
+  /// equality. A DateTime would be written at midnight in one zone and read
+  /// back as the previous day in another, locking a student out of their own
+  /// record. A date of birth has no time and no zone; storing it as text says
+  /// so and removes the whole class of bug.
+  dob          String
+  programme    String
+  /// Upload id for the passport photograph. Served only through an
+  /// authenticated route — never from /public.
+  photoId      String?
+  photo        Upload? @relation(fields: [photoId], references: [id], onDelete: SetNull)
+  /// ACTIVE | GRADUATED | WITHDRAWN
+  status       String  @default("ACTIVE")
+
+  failedLogins Int       @default(0)
+  lockedUntil  DateTime?
+  lastLoginAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  results      Result[]
+  certificates Certificate[]
+
+  // Both halves of the login are matched together.
+  @@index([rollNo, dob])
+}
+
+/// An admission application submitted from /admission/process/.
+model Application {
+  id            String @id @default(cuid())
+  applicationNo String @unique
+
+  fullName   String
+  fatherName String
+  motherName String
+  /// `YYYY-MM-DD`, for the same reason as Student.dob.
+  dob        String
+
+  mobile String
+  email  String
+
+  state    String
+  district String
+  address  String
+  pincode  String
+
+  programme String
+
+  qualification      String
+  qualificationBoard String?
+  qualificationYear  Int?
+  qualificationPct   Float?
+
+  /// Uploaded documents. Nullable so a part-complete application still saves.
+  photoId            String?
+  photo              Upload? @relation("ApplicationPhoto", fields: [photoId], references: [id], onDelete: SetNull)
+  aadhaarId          String?
+  aadhaar            Upload? @relation("ApplicationAadhaar", fields: [aadhaarId], references: [id], onDelete: SetNull)
+  qualificationDocId String?
+  qualificationDoc   Upload? @relation("ApplicationQualification", fields: [qualificationDocId], references: [id], onDelete: SetNull)
+
+  /// Last four digits ONLY.
+  ///
+  /// The full Aadhaar number is never stored. UIDAI requires masking for
+  /// entities that are not authorised authentication agencies, and the DPDP
+  /// Act 2023 makes storing more than is needed a liability rather than an
+  /// asset. Four digits is enough for an office to match an applicant to the
+  /// document they uploaded, which is the only thing it is needed for.
+  aadhaarLast4 String?
+
+  /// SUBMITTED | UNDER_REVIEW | ACCEPTED | REJECTED
+  status  String  @default("SUBMITTED")
+  remarks String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
+  @@index([status])
+}
+
+/// A file someone uploaded.
+///
+/// Rows here are metadata only; the bytes live behind `storageKey`, outside
+/// /public, and are served by an authenticated route. Putting an Aadhaar scan
+/// or a student photograph under /public would publish it at a guessable URL
+/// the moment it was written.
+model Upload {
+  id          String   @id @default(cuid())
+  /// Opaque key for the storage backend (local disk today, object storage in
+  /// production — see src/lib/storage.ts).
+  storageKey  String   @unique
+  filename    String
+  contentType String
+  bytes       Int
+  /// PHOTO | AADHAAR | QUALIFICATION
+  kind        String
+  createdAt   DateTime @default(now())
+
+  students                  Student[]
+  applicationPhotos         Application[] @relation("ApplicationPhoto")
+  applicationAadhaars       Application[] @relation("ApplicationAadhaar")
+  applicationQualifications Application[] @relation("ApplicationQualification")
+}
+
+/// Fixed-window rate limiting, in the database rather than in memory.
+///
+/// Roll number + date of birth is a guessable credential: roll numbers run in
+/// sequence and a cohort's dates of birth span only a few years. In-process
+/// counters would reset on every cold start, which on a serverless host is
+/// often enough to be no limit at all. A row per (bucket, key) survives that.
+model RateLimit {
+  id          String   @id @default(cuid())
+  /// e.g. "student-login" | "verify"
+  bucket      String
+  /// Client IP, or IP + roll number.
+  key         String
+  count       Int      @default(0)
+  windowStart DateTime @default(now())
+
+  @@unique([bucket, key])
+  @@index([windowStart])
 }

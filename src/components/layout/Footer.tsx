@@ -78,7 +78,7 @@ export function Footer() {
       <div className="chrome-topbar text-jnu-200">
         <div className="boxed flex flex-wrap items-center justify-between gap-2 py-3 text-xs">
           <p className="m-0">
-            © {year} {site.legalName}. All rights reserved.
+            © 2008 {site.legalName}. All rights reserved.
           </p>
           <nav aria-label="Legal" className="flex gap-4">
             <Link

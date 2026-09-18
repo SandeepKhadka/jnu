@@ -55,7 +55,7 @@ export function Hero() {
               law, education, arts and commerce.
             </p>
             <div className="flex flex-wrap gap-2">
-              <Link href="/faculty/" className="btn btn-sand">
+              <Link href="/programmes/" className="btn btn-sand">
                 Browse Programmes
               </Link>
               <Link href="/admission/process/" className="btn btn-secondary">

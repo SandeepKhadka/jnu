@@ -312,12 +312,12 @@ export const contentPages: ContentPage[] = [
 
   /* -------------------------------------------------------- academics --- */
   {
-    path: '/faculty/',
+    path: '/programmes/',
     title: 'Faculties & Programmes',
     description:
       'Eight faculties at Jodhpur National University — engineering and technology, management, pharmaceutical sciences, computer application, applied sciences and nursing, law, education, and arts and commerce.',
     intro: 'Programmes by faculty, with duration, award and eligibility.',
-    crumbs: [{ name: 'Faculty', path: '/faculty/' }],
+    crumbs: [{ name: 'Programmes', path: '/programmes/' }],
     body: [
       { type: 'p', text: 'Select a faculty to see its programmes with duration, award and eligibility conditions. Each faculty page also lists the laboratories and facilities supporting its teaching.' },
     ],

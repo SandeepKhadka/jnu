@@ -27,17 +27,25 @@ export const nav: NavItem[] = [
     ],
   },
   {
-    label: 'Faculty',
-    href: '/faculty/',
+    label: 'Programmes',
+    href: '/programmes/',
     children: [
-      { label: 'Engineering & Technology', href: '/faculty/engineering-technology/' },
-      { label: 'Management', href: '/faculty/management/' },
-      { label: 'Pharmaceutical Sciences', href: '/faculty/pharmaceutical-sciences/' },
-      { label: 'Computer Application', href: '/faculty/computer-application/' },
-      { label: 'Applied Sciences & Nursing', href: '/faculty/applied-sciences-nursing/' },
-      { label: 'Law', href: '/faculty/law/' },
-      { label: 'Education', href: '/faculty/education/' },
-      { label: 'Arts & Commerce', href: '/faculty/arts-commerce/' },
+      { label: 'Faculty of Commerce and Management', href: '/programmes/commerce-management/' },
+      { label: 'Faculty of Arts and Social Science', href: '/programmes/arts-social-science/' },
+      { label: 'Faculty of Agriculture Science', href: '/programmes/agriculture-science/' },
+      { label: 'Faculty of Animation', href: '/programmes/animation/' },
+      { label: 'Faculty of Computer Application', href: '/programmes/computer-application/' },
+      { label: 'Faculty of Engineering and Technology', href: '/programmes/engineering-technology/' },
+      { label: 'Faculty of Hotel Management', href: '/programmes/hotel-management/' },
+      { label: 'Faculty of Journalism and Mass Communication', href: '/programmes/journalism-mass-communication/' },
+      { label: 'Faculty of Law', href: '/programmes/law/' },
+      { label: 'Faculty of Library and Information Science', href: '/programmes/library-information-science/' },
+      { label: 'Faculty of Allied and Healthcare Sciences', href: '/programmes/allied-healthcare-sciences/' },
+      { label: 'Faculty of Pharmacy', href: '/programmes/pharmacy/' },
+      { label: 'Faculty of Physiotherapy', href: '/programmes/physiotherapy/' },
+      { label: 'Faculty of Science', href: '/programmes/science/' },
+      { label: 'Faculty of Education', href: '/programmes/education/' },
+      { label: 'Faculty of Nursing', href: '/programmes/nursing/' },
     ],
   },
   {
@@ -58,6 +66,7 @@ export const nav: NavItem[] = [
     href: '/student-zone/',
     children: [
       { label: 'Notices & Circulars', href: '/notices/' },
+      { label: 'Student Login', href: '/student/login/' },
       { label: 'Examination Results', href: '/results/', noindex: true },
       { label: 'Certificate Verification', href: '/verify/' },
       { label: 'Time Table', href: '/student-zone/time-table/' },
@@ -84,4 +93,4 @@ export const quickLinks: NavItem[] = [
 ]
 
 /** Routes excluded from sitemap.xml and served with noindex. */
-export const NOINDEX_ROUTES = ['/results/', '/admin/', '/admin/login/'] as const
+export const NOINDEX_ROUTES = ['/results/', '/admin/', '/admin/login/', '/student/'] as const
