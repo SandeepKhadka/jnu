@@ -84,6 +84,11 @@ model Certificate {
   /// VERIFIED | REVOKED | WITHHELD
   status           String   @default("VERIFIED")
   registrarRemarks String?
+  /// Serial printed on the degree with its QR code; resolves to this entry at
+  /// /verify/certificate/. Random rather than sequential, unlike the
+  /// certificate number, so a serial read off one degree says nothing about
+  /// another. Issued once and never changed.
+  verifyToken      String?  @unique
   issuedOn         DateTime @default(now())
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

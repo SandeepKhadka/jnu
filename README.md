@@ -201,25 +201,35 @@ shown publicly on the verification page — and **Reinstate**. A credential
 withdrawn silently would still read as valid to anyone checking it, which
 defeats the point of keeping a register.
 
-### The SPECIMEN watermark stays
+### How degrees are issued and printed
 
-Every generated certificate carries a diagonal
-**SPECIMEN — ACADEMIC PROJECT · NOT A VALID DEGREE** watermark, rendered in the
-document flow rather than as a CSS background and carrying
-`print-color-adjust: exact`, so it survives printing and PDF export.
+Degrees are issued by the **registrar only**, to a student **on the register**,
+identified by roll number. Name, programme and enrollment number are taken from
+the student record — nothing identifying is typed in — and a second valid
+degree for the same student and programme is refused. Issuing writes the
+register entry before anything printable exists, and gives the degree a random
+serial (`JNU-DEG-XXXX-XXXX-XXXX`) whose QR code resolves to
+`/verify/certificate/`.
 
-This is deliberate. An unmarked replica of a real university's degree is a
-forgery whatever the intent behind producing it — and this institution had
-roughly 25,000 degrees invalidated after an investigation in which certificates
-were sold. The watermark keeps this a demonstration of the feature rather than
-a working forgery tool. Everything being demonstrated — templating, data
-binding, sequencing, print output, verification linkage — works with it there.
+**Print on stationery** prints only the values that differ per graduate — name,
+programme, division, year, numbers, date, serial and QR — onto the university's
+pre-printed certificate blanks. The blank supplies the crest, wording, border,
+hologram and seal; the Controller signs by hand. Positions are millimetres in
+`content/certificate-layout.ts`: calibrate them once with **Alignment test**
+printed on plain paper and laid over a blank. Per-printer drift is handled by
+the offset controls on the print screen. Every stationery print is logged in
+the audit log *before* the print dialog opens, so the log is a count of blanks
+consumed; revoked and withheld degrees cannot be printed.
 
-### When the certificate sample arrives
+**Preview** renders the full design with a **SPECIMEN** watermark and is for
+checking wording only. It stays watermarked on purpose: a complete, unmarked
+degree for a real university that prints on plain paper is a forgery kit
+whoever holds it — and this institution had roughly 25,000 degrees invalidated
+after an investigation in which certificates were sold. A genuine degree is
+the controlled blank plus a wet signature, not a web page.
 
-Restyle **`src/components/admin/CertificateTemplate.tsx`** only. The border,
-seal, typography and layout are isolated in that one file's `<style jsx>`
-block. Keep the watermark block.
+To restyle the preview, edit **`src/components/admin/CertificateTemplate.tsx`**
+(its `<style jsx>` block). Keep the watermark block.
 
 ---
 

@@ -64,3 +64,43 @@ export async function ensureVerifyTokens(
 
   return out
 }
+
+/**
+ * Same as ensureVerifyTokens, for the certificate register. Certificates
+ * issued before serials existed get one the first time staff load the
+ * register, so every degree printed from here on carries a checkable QR.
+ */
+export async function ensureCertificateTokens(
+  rows: { id: string; verifyToken: string | null }[]
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>()
+
+  for (const r of rows) {
+    if (r.verifyToken) {
+      out.set(r.id, r.verifyToken)
+      continue
+    }
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const token = newVerifyToken()
+        const res = await db.certificate.updateMany({
+          where: { id: r.id, verifyToken: null },
+          data: { verifyToken: token },
+        })
+        if (res.count === 1) out.set(r.id, token)
+        else {
+          const current = await db.certificate.findUnique({
+            where: { id: r.id },
+            select: { verifyToken: true },
+          })
+          if (current?.verifyToken) out.set(r.id, current.verifyToken)
+        }
+        break
+      } catch {
+        // 60-bit collision: retry.
+      }
+    }
+  }
+
+  return out
+}

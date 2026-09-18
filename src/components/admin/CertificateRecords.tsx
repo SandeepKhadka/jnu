@@ -1,17 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { site } from '@/content/site'
-import { allProgrammes } from '@/content/programmes'
 import {
   listCertificates,
-  addCertificate,
+  issueCertificate,
   setCertificateStatus,
   nextCertificateNo,
+  getSession,
   type CertificateRecord,
 } from '@/lib/store'
 import { CertificateTemplate } from './CertificateTemplate'
+import { StationeryOverlay } from './CertificateStationery'
 
 const DIVISIONS = [
   'First Division with Distinction',
@@ -22,45 +23,51 @@ const DIVISIONS = [
 
 const thisYear = new Date().getFullYear()
 
-function emptyForm() {
+function emptyForm(rows: CertificateRecord[] = []) {
   return {
-    student_name: '',
-    programme: allProgrammes[0]?.name ?? '',
+    roll_no: '',
     award_year: String(thisYear),
-    enrollment_no: '',
     division: DIVISIONS[1],
-    certificate_no: nextCertificateNo(thisYear, []),
+    certificate_no: nextCertificateNo(thisYear, rows),
     registrar_remarks: '',
   }
 }
 
 /**
- * Certificate register + generator.
+ * Certificate register, issuing and printing.
  *
- * The register is what backs public verification at /verify/. Generating a
- * certificate writes the record first, so anything printed is verifiable —
- * a document that cannot be checked against the register is exactly the
- * problem this feature exists to avoid.
+ * A degree is issued to a student on the register by ROLL NUMBER; the server
+ * takes name, programme and enrollment number from that record. Issuing
+ * writes the register entry first, so everything printed is verifiable — by
+ * roll number and date of birth at /verify/, or by the QR on the degree.
  *
- * Every generated document carries a SPECIMEN watermark; see the note in
- * CertificateTemplate.tsx for why that stays.
+ * Genuine degrees are printed with "Print on stationery", onto the
+ * university's pre-printed blanks. "Preview" renders the full design with a
+ * SPECIMEN watermark, for checking wording only.
+ *
+ * Issuing, stationery printing and status changes are registrar-only on the
+ * server; the controls are hidden for other roles so nobody is offered a
+ * button that will refuse them.
  */
 export function CertificateRecords() {
   const [rows, setRows] = useState<CertificateRecord[]>([])
-  const [form, setForm] = useState(emptyForm)
+  const [form, setForm] = useState(() => emptyForm())
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
   const [preview, setPreview] = useState<CertificateRecord | null>(null)
+  const [printing, setPrinting] = useState<CertificateRecord | null>(null)
+  const [isRegistrar, setIsRegistrar] = useState(false)
 
-  async function load() {
+  const load = useCallback(async () => {
     setRows(await listCertificates())
-  }
-
-  useEffect(() => {
-    load()
   }, [])
 
-  // Print isolation: hide the site chrome so only the certificate prints.
+  useEffect(() => {
+    void load()
+    void getSession().then((s) => setIsRegistrar(s?.role === 'registrar'))
+  }, [load])
+
+  // Print isolation for the specimen preview.
   useEffect(() => {
     if (preview) document.body.classList.add('cert-printing')
     else document.body.classList.remove('cert-printing')
@@ -76,7 +83,9 @@ export function CertificateRecords() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.award_year, rows.length])
 
-  async function onGenerate(e: React.FormEvent) {
+  const closePrinting = useCallback(() => setPrinting(null), [])
+
+  async function onIssue(e: React.FormEvent) {
     e.preventDefault()
     setMsg(null)
 
@@ -85,22 +94,18 @@ export function CertificateRecords() {
       setMsg({ tone: 'err', text: `Enter a year of award between 1950 and ${thisYear}.` })
       return
     }
-    if (!form.student_name.trim()) {
-      setMsg({ tone: 'err', text: 'Enter the student name as it should appear on the degree.' })
+    if (!form.roll_no.trim()) {
+      setMsg({ tone: 'err', text: 'Enter the roll number of the student receiving the degree.' })
       return
     }
 
     setBusy(true)
-    const res = await addCertificate({
-      certificate_no: form.certificate_no,
-      student_name: form.student_name.trim(),
-      programme: form.programme,
-      award_year: year,
-      enrollment_no: form.enrollment_no.trim() || '—',
+    const res = await issueCertificate({
+      rollNo: form.roll_no.trim(),
+      certificateNo: form.certificate_no,
+      awardYear: year,
       division: form.division,
-      status: 'VERIFIED',
-      registrar_remarks: form.registrar_remarks.trim() || undefined,
-      issued_on: new Date().toISOString().slice(0, 10),
+      registrarRemarks: form.registrar_remarks.trim() || undefined,
     })
     setBusy(false)
 
@@ -110,23 +115,30 @@ export function CertificateRecords() {
     }
 
     await load()
-    setPreview(res.record)
     setMsg({
       tone: 'ok',
-      text: `${form.certificate_no} recorded and generated. It is now verifiable at /verify/.`,
+      text:
+        `${res.record.certificate_no} issued to ${res.record.student_name} and entered in the ` +
+        'register. Check the preview, then use "Print on stationery".',
     })
-    setForm(emptyForm())
+    setPreview(res.record)
+    setForm(emptyForm(rows))
   }
 
   async function changeStatus(row: CertificateRecord, status: CertificateRecord['status']) {
+    let res: { ok: true } | { ok: false; error: string }
     if (status === 'REVOKED') {
       const reason = window.prompt(
         `Revoke ${row.certificate_no}? Enter the reason — it is recorded in the audit log and shown on the verification page.`
       )
       if (reason === null) return
-      await setCertificateStatus(row.id, status, reason)
+      res = await setCertificateStatus(row.id, status, reason)
     } else {
-      await setCertificateStatus(row.id, status, '')
+      res = await setCertificateStatus(row.id, status, '')
+    }
+    if (!res.ok) {
+      setMsg({ tone: 'err', text: res.error })
+      return
     }
     await load()
     setMsg({ tone: 'ok', text: `${row.certificate_no} set to ${status}.` })
@@ -134,20 +146,28 @@ export function CertificateRecords() {
 
   return (
     <div className="space-y-6">
-      {preview ? (
-        <PreviewOverlay cert={preview} onClose={() => setPreview(null)} />
-      ) : null}
+      {preview ? <PreviewOverlay cert={preview} onClose={() => setPreview(null)} /> : null}
+      {printing ? <StationeryOverlay cert={printing} onClose={closePrinting} /> : null}
 
       <div className="panel border-l-[3px] border-l-sand-500">
         <div className="panel-body">
           <p className="m-0 text-[13px] text-muted">
-            <strong className="text-jnu-800">How this works: </strong>
-            generating a certificate writes it to the register first, so every document
-            produced here can be checked on the public{' '}
-            <a href="/verify/">verification page</a>. Output carries a{' '}
-            <strong className="text-jnu-800">SPECIMEN</strong> watermark that also prints —
-            this is an academic project, and the documents are not valid degrees.
+            <strong className="text-jnu-800">How degrees are issued: </strong>
+            enter the student&rsquo;s roll number — name, programme and enrollment number come
+            from the student register. Issuing writes the certificate to the register, so it
+            is verifiable on the <a href="/verify/">verification page</a> and by the QR code
+            printed on it. Degrees are printed with{' '}
+            <strong className="text-jnu-800">Print on stationery</strong> onto the
+            university&rsquo;s certificate blanks and signed by hand; every print is logged.{' '}
+            <strong className="text-jnu-800">Preview</strong> carries a SPECIMEN watermark and
+            is for checking wording only.
           </p>
+          {!isRegistrar ? (
+            <p className="m-0 mt-2 text-[13px] text-[#9a6a10]">
+              Issuing, printing and revoking degrees are restricted to the registrar. You can
+              view the register.
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -164,93 +184,78 @@ export function CertificateRecords() {
         </p>
       ) : null}
 
-      {/* ---- generate ---- */}
-      <form onSubmit={onGenerate} className="panel">
-        <h2 className="panel-head m-0">Generate a Certificate</h2>
-        <div className="panel-body">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <Text
-              id="student_name"
-              label="Student Name"
-              value={form.student_name}
-              onChange={(v) => setForm({ ...form, student_name: v })}
-              placeholder="As it should appear on the degree"
-              required
-            />
-
-            <div>
-              <label htmlFor="programme" className="mb-1 block text-[12px] font-semibold text-jnu-800">
-                Programme
-              </label>
-              <select
-                id="programme"
-                value={form.programme}
-                onChange={(e) => setForm({ ...form, programme: e.target.value })}
-                className="w-full rounded border border-hair px-2.5 py-1.5 text-[13px] focus:border-jnu-400"
-              >
-                {allProgrammes.map((p) => (
-                  <option key={p.slug} value={p.name}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <Text
-              id="award_year"
-              label="Year of Award"
-              value={form.award_year}
-              onChange={(v) => setForm({ ...form, award_year: v })}
-              required
-            />
-
-            <Text
-              id="enrollment_no"
-              label="Enrollment Number"
-              value={form.enrollment_no}
-              onChange={(v) => setForm({ ...form, enrollment_no: v })}
-              placeholder="JNU/2022/BT/1187"
-            />
-
-            <div>
-              <label htmlFor="division" className="mb-1 block text-[12px] font-semibold text-jnu-800">
-                Division
-              </label>
-              <select
-                id="division"
-                value={form.division}
-                onChange={(e) => setForm({ ...form, division: e.target.value })}
-                className="w-full rounded border border-hair px-2.5 py-1.5 text-[13px] focus:border-jnu-400"
-              >
-                {DIVISIONS.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="certificate_no" className="mb-1 block text-[12px] font-semibold text-jnu-800">
-                Certificate Number
-              </label>
-              <input
-                id="certificate_no"
-                value={form.certificate_no}
-                onChange={(e) => setForm({ ...form, certificate_no: e.target.value })}
-                className="tnum w-full rounded border border-hair px-2.5 py-1.5 text-[13px] focus:border-jnu-400"
+      {/* ---- issue ---- */}
+      {isRegistrar ? (
+        <form onSubmit={onIssue} className="panel">
+          <h2 className="panel-head m-0">Issue a Degree</h2>
+          <div className="panel-body">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <Text
+                id="roll_no"
+                label="Student Roll Number"
+                value={form.roll_no}
+                onChange={(v) => setForm({ ...form, roll_no: v })}
+                placeholder="JNU2024BT0147"
+                required
               />
-              <p className="m-0 mt-1 text-[11px] text-muted">
-                Auto-sequenced from the register; edit if the paper register differs.
-              </p>
-            </div>
-          </div>
 
-          <button type="submit" disabled={busy} className="btn btn-primary mt-4">
-            {busy ? 'Generating…' : 'Generate certificate'}
-          </button>
-        </div>
-      </form>
+              <Text
+                id="award_year"
+                label="Year of Award"
+                value={form.award_year}
+                onChange={(v) => setForm({ ...form, award_year: v })}
+                required
+              />
+
+              <div>
+                <label htmlFor="division" className="mb-1 block text-[12px] font-semibold text-jnu-800">
+                  Division
+                </label>
+                <select
+                  id="division"
+                  value={form.division}
+                  onChange={(e) => setForm({ ...form, division: e.target.value })}
+                  className="w-full rounded border border-hair px-2.5 py-1.5 text-[13px] focus:border-jnu-400"
+                >
+                  {DIVISIONS.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="certificate_no" className="mb-1 block text-[12px] font-semibold text-jnu-800">
+                  Certificate Number
+                </label>
+                <input
+                  id="certificate_no"
+                  value={form.certificate_no}
+                  onChange={(e) => setForm({ ...form, certificate_no: e.target.value })}
+                  className="tnum w-full rounded border border-hair px-2.5 py-1.5 text-[13px] focus:border-jnu-400"
+                />
+                <p className="m-0 mt-1 text-[11px] text-muted">
+                  Auto-sequenced from the register; edit if the paper register differs.
+                </p>
+              </div>
+
+              <div className="sm:col-span-2">
+                <Text
+                  id="registrar_remarks"
+                  label="Remarks (optional, shown on verification)"
+                  value={form.registrar_remarks}
+                  onChange={(v) => setForm({ ...form, registrar_remarks: v })}
+                />
+              </div>
+            </div>
+
+            <button type="submit" disabled={busy} className="btn btn-primary mt-4">
+              {busy ? 'Issuing…' : 'Issue degree'}
+            </button>
+          </div>
+        </form>
+      ) : null}
 
       {/* ---- register ---- */}
       <div className="panel">
@@ -265,6 +270,7 @@ export function CertificateRecords() {
                 <tr>
                   <th className="border-b border-hair bg-shell px-3 py-2 text-left">Certificate No.</th>
                   <th className="border-b border-hair bg-shell px-3 py-2 text-left">Name</th>
+                  <th className="border-b border-hair bg-shell px-3 py-2 text-left">Roll No.</th>
                   <th className="border-b border-hair bg-shell px-3 py-2 text-left">Programme</th>
                   <th className="border-b border-hair bg-shell px-3 py-2 text-right">Year</th>
                   <th className="border-b border-hair bg-shell px-3 py-2 text-left">Status</th>
@@ -274,10 +280,14 @@ export function CertificateRecords() {
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id}>
-                    <td className="tnum border-b border-hair px-3 py-2 font-semibold">
-                      {r.certificate_no}
+                    <td className="border-b border-hair px-3 py-2">
+                      <span className="tnum block font-semibold">{r.certificate_no}</span>
+                      {r.serial ? (
+                        <span className="tnum block text-[11px] text-muted">{r.serial}</span>
+                      ) : null}
                     </td>
                     <td className="border-b border-hair px-3 py-2">{r.student_name}</td>
+                    <td className="tnum border-b border-hair px-3 py-2">{r.roll_no ?? '—'}</td>
                     <td className="border-b border-hair px-3 py-2">{r.programme}</td>
                     <td className="tnum border-b border-hair px-3 py-2 text-right">{r.award_year}</td>
                     <td className="border-b border-hair px-3 py-2">
@@ -289,25 +299,36 @@ export function CertificateRecords() {
                         onClick={() => setPreview(r)}
                         className="mr-3 text-jnu-600 underline"
                       >
-                        View / Print
+                        Preview
                       </button>
-                      {r.status !== 'REVOKED' ? (
-                        <button
-                          type="button"
-                          onClick={() => changeStatus(r, 'REVOKED')}
-                          className="text-[#a8322b] underline"
-                        >
-                          Revoke
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => changeStatus(r, 'VERIFIED')}
-                          className="text-jnu-600 underline"
-                        >
-                          Reinstate
-                        </button>
-                      )}
+                      {isRegistrar ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setPrinting(r)}
+                            className="mr-3 font-semibold text-jnu-800 underline"
+                          >
+                            Print on stationery
+                          </button>
+                          {r.status !== 'REVOKED' ? (
+                            <button
+                              type="button"
+                              onClick={() => changeStatus(r, 'REVOKED')}
+                              className="text-[#a8322b] underline"
+                            >
+                              Revoke
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => changeStatus(r, 'VERIFIED')}
+                              className="text-jnu-600 underline"
+                            >
+                              Reinstate
+                            </button>
+                          )}
+                        </>
+                      ) : null}
                     </td>
                   </tr>
                 ))}
@@ -398,8 +419,14 @@ function PreviewOverlay({
         <CertificateTemplate cert={cert} />
 
         <p className="no-print mt-3 text-center text-[12px] text-jnu-100">
-          Verifiable at {site.url.replace(/^https?:\/\//, '')}/verify/ — certificate number{' '}
-          <span className="tnum">{cert.certificate_no}</span>
+          Preview only. Verifiable at {site.url.replace(/^https?:\/\//, '')}/verify/certificate/
+          {cert.serial ? (
+            <>
+              {' — serial '}
+              <span className="tnum">{cert.serial}</span>
+            </>
+          ) : null}
+          . Print the degree with <strong>Print on stationery</strong>.
         </p>
         <p className="no-print mt-1 text-center text-[11.5px] text-jnu-200">
           In the print dialog, tick <strong>Background graphics</strong> for the tinted

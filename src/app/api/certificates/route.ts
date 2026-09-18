@@ -1,76 +1,128 @@
 import { db } from '@/lib/db'
-import { requireStaff, audit } from '@/lib/auth'
+import { audit, requireRole, requireStaff } from '@/lib/auth'
 import { ok, fail, handleError, readJson } from '@/lib/api'
+import { formatSerial } from '@/lib/marksheet'
+import { ensureCertificateTokens, newVerifyToken } from '@/lib/marksheet-token'
 
 export const dynamic = 'force-dynamic'
 
-/** GET /api/certificates — staff only. The full register. */
+/** GET /api/certificates — staff only. The full register, each with its serial. */
 export async function GET() {
   try {
     await requireStaff()
     const rows = await db.certificate.findMany({ orderBy: { issuedOn: 'desc' }, take: 500 })
-    return ok({ certificates: rows })
+    const tokens = await ensureCertificateTokens(rows)
+    return ok({
+      certificates: rows.map(({ verifyToken: _t, ...r }) => {
+        const t = tokens.get(r.id)
+        return { ...r, serial: t ? formatSerial(t, 'DEG') : null }
+      }),
+    })
   } catch (e) {
     return handleError(e)
   }
 }
 
-const STATUSES = ['VERIFIED', 'REVOKED', 'WITHHELD']
+const DIVISIONS = [
+  'First Division with Distinction',
+  'First Division',
+  'Second Division',
+  'Third Division',
+]
 
 /**
- * POST /api/certificates — staff only.
+ * POST /api/certificates — REGISTRAR ONLY. Issues a degree.
  *
- * The record is written here, before the client renders anything printable.
- * A certificate that cannot be checked against the register is precisely the
- * problem this feature exists to prevent, so issuing and recording are one
- * operation rather than two.
+ * { rollNo, awardYear, division, certificateNo, registrarRemarks? }
+ *
+ * The degree is issued to a STUDENT ON THE REGISTER, identified by roll
+ * number. Name, programme and enrollment number are taken from that record,
+ * not typed in. Previously any member of staff could type any name against
+ * any programme and receive a certificate that the public verification page
+ * would then confirm — for an institution whose degrees were once sold, that
+ * is the single capability this system must not have.
+ *
+ * Also refused: a second valid degree for the same student and programme, and
+ * a degree for a withdrawn student. The record is written before anything
+ * printable exists, so everything printed is in the register.
  */
 export async function POST(req: Request) {
   try {
-    const user = await requireStaff()
+    const user = await requireRole('registrar')
     const body = await readJson<{
+      rollNo?: string
       certificateNo?: string
-      studentName?: string
-      programme?: string
-      awardYear?: number
-      enrollmentNo?: string
+      awardYear?: number | string
       division?: string
-      status?: string
       registrarRemarks?: string
     }>(req)
     if (!body) return fail('Invalid request body.')
 
+    const rollNo = body.rollNo?.trim().toUpperCase()
     const certificateNo = body.certificateNo?.trim().toUpperCase()
-    const studentName = body.studentName?.trim()
     const year = Number(body.awardYear)
     const thisYear = new Date().getFullYear()
 
+    if (!rollNo) return fail('Enter the roll number of the student receiving the degree.')
     if (!certificateNo) return fail('A certificate number is required.')
-    if (!studentName) return fail('The student name is required.')
-    if (!body.programme?.trim()) return fail('The programme is required.')
     if (!Number.isInteger(year) || year < 1950 || year > thisYear) {
       return fail(`Year of award must be between 1950 and ${thisYear}.`)
     }
+    const division = body.division?.trim() ?? ''
+    if (!DIVISIONS.includes(division)) return fail('Select a division from the list.')
 
-    const status = (body.status ?? 'VERIFIED').toUpperCase()
-    if (!STATUSES.includes(status)) return fail(`Status must be one of ${STATUSES.join(', ')}.`)
+    const student = await db.student.findUnique({ where: { rollNo } })
+    if (!student) return fail(`No student with roll number ${rollNo} is on the register.`, 404)
+    if (student.status === 'WITHDRAWN') {
+      return fail(`${rollNo} is recorded as withdrawn; a degree cannot be issued.`, 409)
+    }
+
+    const existing = await db.certificate.findFirst({
+      where: {
+        OR: [{ studentId: student.id }, { rollNo }],
+        programme: student.programme,
+        status: { in: ['VERIFIED', 'WITHHELD'] },
+      },
+      select: { certificateNo: true },
+    })
+    if (existing) {
+      return fail(
+        `${rollNo} already holds ${existing.certificateNo} for ${student.programme}. ` +
+          'Revoke it first if a replacement is being issued.',
+        409
+      )
+    }
 
     const row = await db.certificate.create({
       data: {
         certificateNo,
-        studentName,
-        programme: body.programme.trim(),
+        studentName: student.fullName,
+        programme: student.programme,
         awardYear: year,
-        enrollmentNo: body.enrollmentNo?.trim() || '—',
-        division: body.division?.trim() || 'First Division',
-        status,
+        enrollmentNo: student.enrollmentNo,
+        division,
+        status: 'VERIFIED',
         registrarRemarks: body.registrarRemarks?.trim() || null,
+        rollNo,
+        studentId: student.id,
+        verifyToken: newVerifyToken(),
       },
     })
 
-    await audit(user, 'certificate.create', `${certificateNo} — ${studentName}`)
-    return ok({ certificate: row }, 201)
+    // A student holding a degree has graduated; keep the register consistent.
+    if (student.status === 'ACTIVE') {
+      await db.student.update({ where: { id: student.id }, data: { status: 'GRADUATED' } })
+    }
+
+    await audit(user, 'certificate.issue', `${certificateNo} — ${student.fullName} (${rollNo})`)
+
+    const { verifyToken, ...rest } = row
+    return ok(
+      { certificate: { ...rest, serial: verifyToken ? formatSerial(verifyToken, 'DEG') : null } },
+      201
+    )
   } catch (e) {
     return handleError(e)
   }
 }
+

@@ -261,10 +261,14 @@ gets you an empty page.
 - An unknown roll number and an unpublished one return the **identical**
   message. If they differed, anyone could enumerate which roll numbers are
   enrolled by trying values.
-- The certificate generator **writes the register row before rendering
-  anything printable**, so every document produced can be verified at
-  `/verify/`. A certificate that cannot be checked is the problem the feature
-  exists to prevent.
+- Issuing a degree **writes the register row before anything printable
+  exists**, so every degree can be verified at `/verify/` and by the QR code
+  printed on it (`/verify/certificate/`). Issuing, stationery printing and
+  revoking are registrar-only; a degree can only go to a student on the
+  register, by roll number.
+- Before the first real stationery print, **calibrate**
+  `content/certificate-layout.ts` against the university's blank using the
+  Alignment test (see README).
 
 ### Live demo, in order
 

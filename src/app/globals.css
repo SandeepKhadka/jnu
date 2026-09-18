@@ -321,3 +321,84 @@
   size: A4 portrait;
   margin: 6mm;
 }
+
+/* ------------------------------------------------ certificate stationery --
+ * Screen: the page is drawn cream with a shadow to stand in for the blank, so
+ * the registrar can see where values will land. Print: only the values and
+ * the QR reach the paper — the real blank supplies everything else.
+ */
+.stationery-page {
+  position: relative;
+  margin: 0 auto;
+  background: #fbf7ee;
+  box-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+  color: #111;
+  font-family: Georgia, 'Times New Roman', serif;
+  overflow: hidden;
+}
+.stationery-field {
+  position: absolute;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.stationery-field.is-outline,
+.stationery-qr.is-outline {
+  outline: 0.3mm dashed #7a1f2b;
+  color: #7a1f2b;
+}
+.stationery-qr {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  font-size: 9pt;
+}
+.stationery-qr svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.stationery-alignment-title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 48%;
+  margin: 0;
+  text-align: center;
+  font: 700 11pt/1 Arial, sans-serif;
+  letter-spacing: 0.08em;
+  color: #7a1f2b;
+  opacity: 0.55;
+}
+.stationery-corner {
+  position: absolute;
+  width: 8mm;
+  height: 8mm;
+  border: 0.3mm solid #7a1f2b;
+}
+
+@media print {
+  body.stationery-printing > *:not(#stationery-overlay) {
+    display: none !important;
+  }
+  body.stationery-printing #stationery-overlay {
+    position: static !important;
+    inset: auto !important;
+    z-index: auto !important;
+    overflow: visible !important;
+    background: none !important;
+    padding: 0 !important;
+  }
+  /* Real size, no margin, no scaling: positions are millimetres on the blank. */
+  body.stationery-printing .stationery-page {
+    page: stationery;
+    margin: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+  }
+}
+
+@page stationery {
+  size: A4 landscape;
+  margin: 0;
+}

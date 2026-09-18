@@ -13,9 +13,16 @@
 export const SERIAL_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
 export const SERIAL_LENGTH = 12
 
-/** `7K3MQ9XA2BCD` → `JNU-SOM-7K3M-Q9XA-2BCD`, the form printed on the sheet. */
-export function formatSerial(token: string): string {
-  return `JNU-SOM-${token.match(/.{1,4}/g)?.join('-') ?? token}`
+/**
+ * Which document a serial belongs to. Statements of marks and degree
+ * certificates draw from separate tables, so the prefix is for the reader —
+ * it tells an employer which verification page they are on.
+ */
+export type SerialKind = 'SOM' | 'DEG'
+
+/** `7K3MQ9XA2BCD` → `JNU-SOM-7K3M-Q9XA-2BCD`, the form printed on the document. */
+export function formatSerial(token: string, kind: SerialKind = 'SOM'): string {
+  return `JNU-${kind}-${token.match(/.{1,4}/g)?.join('-') ?? token}`
 }
 
 /**
@@ -26,7 +33,7 @@ export function formatSerial(token: string): string {
 export function parseSerial(input: string): string | null {
   const bare = input
     .toUpperCase()
-    .replace(/^JNU-?SOM-?/, '')
+    .replace(/^JNU-?(SOM|DEG)-?/, '')
     .replace(/[\s-]/g, '')
     // Crockford's decoding rules for the look-alikes it excludes.
     .replace(/[IL]/g, '1')

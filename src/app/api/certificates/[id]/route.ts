@@ -1,5 +1,5 @@
 import { db } from '@/lib/db'
-import { requireStaff, audit } from '@/lib/auth'
+import { requireRole, audit } from '@/lib/auth'
 import { ok, fail, handleError, readJson } from '@/lib/api'
 
 export const dynamic = 'force-dynamic'
@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 const STATUSES = ['VERIFIED', 'REVOKED', 'WITHHELD']
 
 /**
- * PATCH /api/certificates/:id — staff only. Revoke, withhold or reinstate.
+ * PATCH /api/certificates/:id — REGISTRAR ONLY. Revoke, withhold or reinstate.
  *
  * Revocation requires a reason, which is stored and shown publicly on the
  * verification page. A credential withdrawn silently would still read as valid
@@ -15,7 +15,9 @@ const STATUSES = ['VERIFIED', 'REVOKED', 'WITHHELD']
  */
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const user = await requireStaff()
+    // Reinstating a revoked degree makes it verify as valid again, so it is
+    // the same authority as issuing one.
+    const user = await requireRole('registrar')
     const { id } = await ctx.params
     const body = await readJson<{ status?: string; registrarRemarks?: string }>(req)
 

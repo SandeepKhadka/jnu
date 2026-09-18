@@ -61,6 +61,9 @@ export type CertificateRecord = {
   status: 'VERIFIED' | 'REVOKED' | 'WITHHELD'
   registrar_remarks?: string | null
   issued_on: string
+  roll_no?: string | null
+  /** Printed with the QR code, e.g. JNU-DEG-7K3M-Q9XA-2BCD. */
+  serial?: string | null
 }
 
 export type Session = {
@@ -162,6 +165,8 @@ type ApiCertificate = {
   status: CertificateRecord['status']
   registrarRemarks?: string | null
   issuedOn?: string
+  rollNo?: string | null
+  serial?: string | null
 }
 
 function toCertificate(c: ApiCertificate): CertificateRecord {
@@ -176,6 +181,8 @@ function toCertificate(c: ApiCertificate): CertificateRecord {
     status: c.status,
     registrar_remarks: c.registrarRemarks ?? null,
     issued_on: (c.issuedOn ?? new Date().toISOString()).slice(0, 10),
+    roll_no: c.rollNo ?? null,
+    serial: c.serial ?? null,
   }
 }
 
@@ -266,26 +273,68 @@ export async function listCertificates(): Promise<CertificateRecord[]> {
   return res.data.certificates.map(toCertificate)
 }
 
-export async function addCertificate(
-  input: Omit<CertificateRecord, 'id'>
-): Promise<{ ok: true; id: string; record: CertificateRecord } | { ok: false; error: string }> {
+/**
+ * Issues a degree to a student on the register. Registrar only. The server
+ * takes the name, programme and enrollment number from the student record;
+ * nothing identifying is typed in here.
+ */
+export async function issueCertificate(input: {
+  rollNo: string
+  certificateNo: string
+  awardYear: number
+  division: string
+  registrarRemarks?: string
+}): Promise<{ ok: true; record: CertificateRecord } | { ok: false; error: string }> {
   const res = await api<{ certificate: ApiCertificate }>('/api/certificates', {
     method: 'POST',
-    body: JSON.stringify({
-      certificateNo: input.certificate_no,
-      studentName: input.student_name,
-      programme: input.programme,
-      awardYear: input.award_year,
-      enrollmentNo: input.enrollment_no,
-      division: input.division,
-      status: input.status,
-      registrarRemarks: input.registrar_remarks ?? undefined,
-    }),
+    body: JSON.stringify(input),
   })
-
   if (!res.ok) return res
-  const record = toCertificate(res.data.certificate)
-  return { ok: true, id: record.id, record }
+  return { ok: true, record: toCertificate(res.data.certificate) }
+}
+
+/**
+ * Records a stationery print (or alignment test) in the audit log. The admin
+ * screen prints only if this succeeds, so the log is a count of every blank
+ * used. Registrar only; refused for a revoked or withheld degree.
+ */
+export async function logCertificatePrint(
+  id: string,
+  mode: 'stationery' | 'alignment'
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await api(`/api/certificates/${id}/print`, {
+    method: 'POST',
+    body: JSON.stringify({ mode }),
+  })
+  return res.ok ? { ok: true } : res
+}
+
+export type CertificateBySerial = {
+  serial: string
+  certificateNo: string
+  studentName: string
+  programme: string
+  awardYear: number
+  enrollmentNo: string
+  division: string
+  status: CertificateRecord['status']
+  registrarRemarks: string | null
+  issuedOn: string
+}
+
+/** What the QR code on a printed degree resolves to. */
+export async function findCertificateBySerial(
+  serial: string
+): Promise<
+  | { kind: 'found'; cert: CertificateBySerial }
+  | { kind: 'not-found' }
+  | { kind: 'error'; error: string }
+> {
+  const res = await api<{ certificate: CertificateBySerial | null }>(
+    `/api/certificates/by-serial?sn=${encodeURIComponent(serial.trim())}`
+  )
+  if (!res.ok) return { kind: 'error', error: res.error }
+  return res.data.certificate ? { kind: 'found', cert: res.data.certificate } : { kind: 'not-found' }
 }
 
 export async function setCertificateStatus(

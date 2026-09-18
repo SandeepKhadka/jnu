@@ -4,19 +4,20 @@ import { site } from '@/content/site'
 import type { CertificateRecord } from '@/lib/store'
 
 /**
- * Printable degree certificate.
+ * On-screen PREVIEW of a degree certificate. Never the degree itself.
  *
- * The SPECIMEN watermark is not decoration and must not be removed. This is an
- * academic project, and an unmarked replica of a real university's degree is a
- * forgery whatever the intent behind producing it — particularly for this
- * institution, whose degrees were invalidated at scale after certificates were
- * sold. The watermark is rendered in the document flow (not a CSS background)
- * and carries `print-color-adjust: exact`, so it survives printing and PDF
- * export rather than being dropped as a background graphic.
+ * Genuine degrees are printed by the registrar onto the university's
+ * pre-printed security stationery (CertificateStationery.tsx), where the
+ * blank supplies the crest, wording, hologram and seal and the Controller
+ * signs by hand. This full-design render exists to check the wording before
+ * a blank is used.
  *
- * When the client supplies the real certificate sample, restyle the border,
- * type and seal here — the layout is intentionally isolated in this one file.
- * Keep the watermark.
+ * The SPECIMEN watermark therefore stays. A complete, unmarked degree for a
+ * real university rendered by a web page and printable on plain paper is a
+ * forgery kit whoever holds it — particularly for this institution, whose
+ * degrees were invalidated at scale after certificates were sold. It is in
+ * the document flow (not a CSS background) with print-color-adjust: exact,
+ * so it survives printing and PDF export.
  */
 export function CertificateTemplate({ cert }: { cert: CertificateRecord }) {
   const issued = new Date(`${cert.issued_on}T00:00:00Z`).toLocaleDateString('en-IN', {
@@ -34,7 +35,7 @@ export function CertificateTemplate({ cert }: { cert: CertificateRecord }) {
           {/* ---- watermark: in flow, prints, non-negotiable ---- */}
           <div className="cert-watermark" aria-hidden="true">
             <span>SPECIMEN</span>
-            <span className="cert-watermark-sub">ACADEMIC PROJECT · NOT A VALID DEGREE</span>
+            <span className="cert-watermark-sub">PREVIEW · DEGREES ARE ISSUED ONLY ON UNIVERSITY STATIONERY</span>
           </div>
 
           <header className="cert-head">
