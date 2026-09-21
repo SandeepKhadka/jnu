@@ -22,10 +22,10 @@ export function PageHeader({
   actions?: React.ReactNode
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-start justify-between gap-3 border-b border-hair pb-4">
+    <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0">
-        <h1 className="m-0 font-display text-[22px] text-jnu-800">{title}</h1>
-        {description ? <p className="m-0 mt-1 max-w-2xl text-[13px] text-muted">{description}</p> : null}
+        <h1 className="m-0 font-display text-[22px] leading-tight text-jnu-800">{title}</h1>
+        {description ? <p className="m-0 mt-1.5 max-w-2xl text-[13px] leading-relaxed text-muted">{description}</p> : null}
       </div>
       {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
     </div>
@@ -44,11 +44,11 @@ export function Card({
   actions?: React.ReactNode
 }) {
   return (
-    <section className="mb-5 rounded border border-hair bg-white">
+    <section className="mb-4 rounded-xl border border-[#dde3ea] bg-white shadow-[0_1px_2px_rgba(13,47,74,.05)]">
       {title ? (
-        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-hair bg-shell px-4 py-2.5">
+        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e8edf2] px-4 py-3">
           <div>
-            <h2 className="m-0 font-display text-[14px] uppercase tracking-wide text-jnu-800">{title}</h2>
+            <h2 className="m-0 font-display text-[13.5px] uppercase tracking-wide text-jnu-800">{title}</h2>
             {description ? <p className="m-0 mt-0.5 text-[12px] text-muted">{description}</p> : null}
           </div>
           {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
@@ -92,7 +92,7 @@ export function Field({
 }
 
 const inputClass =
-  'w-full rounded border border-hair px-2.5 py-1.5 text-[13px] focus:border-jnu-400 focus:outline-none disabled:bg-shell disabled:text-muted'
+  'w-full rounded-lg border border-[#dde3ea] bg-white px-3 py-2 text-[13px] transition-colors focus:border-jnu-500 focus:outline-none focus:ring-2 focus:ring-jnu-500/25 disabled:bg-shell disabled:text-muted'
 
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${inputClass} ${props.className ?? ''}`} />
@@ -197,11 +197,11 @@ export function Button({
   size?: 'sm' | 'md'
 }) {
   const base =
-    'inline-flex items-center justify-center rounded border font-semibold uppercase tracking-wide transition-colors disabled:opacity-50'
-  const sizes = size === 'sm' ? 'px-2.5 py-1 text-[11px]' : 'px-3.5 py-1.5 text-[12px]'
+    'inline-flex items-center justify-center gap-1.5 rounded-lg border font-semibold uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jnu-500/35 disabled:opacity-50'
+  const sizes = size === 'sm' ? 'px-2.5 py-1.5 text-[11px]' : 'px-3.5 py-2 text-[12px]'
   const variants = {
-    primary: 'border-jnu-600 bg-jnu-600 text-white hover:bg-jnu-700',
-    secondary: 'border-hair bg-white text-jnu-800 hover:bg-shell',
+    primary: 'border-jnu-600 bg-jnu-600 text-white shadow-[0_1px_2px_rgba(13,47,74,.15)] hover:border-jnu-700 hover:bg-jnu-700',
+    secondary: 'border-[#dde3ea] bg-white text-jnu-800 hover:border-[#c5cfda] hover:bg-shell',
     danger: 'border-[#a8322b] bg-white text-[#a8322b] hover:bg-[#fdf4f3]',
     ghost: 'border-transparent bg-transparent text-jnu-700 hover:bg-shell',
   }[variant]
@@ -308,31 +308,34 @@ export function Table({ head, children }: { head: string[]; children: React.Reac
         <thead>
           <tr>
             {head.map((h) => (
-              <th key={h} className="whitespace-nowrap border-b border-hair bg-shell px-3 py-2 text-left font-semibold">
+              <th
+                key={h}
+                className="whitespace-nowrap border-b border-[#e8edf2] bg-[#f7f9fb] px-3 py-2.5 text-left text-[12px] font-semibold uppercase tracking-wide text-muted"
+              >
                 {h}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody>{children}</tbody>
+        <tbody className="[&>tr]:transition-colors [&>tr:hover]:bg-[#f7f9fb]">{children}</tbody>
       </table>
     </div>
   )
 }
 
 export function Td({ children, className = '' }: { children?: React.ReactNode; className?: string }) {
-  return <td className={`border-b border-hair px-3 py-2 align-top ${className}`}>{children}</td>
+  return <td className={`border-b border-[#eef1f5] px-3 py-2.5 align-top ${className}`}>{children}</td>
 }
 
 export function Pill({ tone, children }: { tone: 'ok' | 'warn' | 'bad' | 'muted'; children: React.ReactNode }) {
   const c = {
-    ok: 'border-[#2c6549] text-[#2c6549]',
-    warn: 'border-[#9a6a10] text-[#9a6a10]',
-    bad: 'border-[#a8322b] text-[#a8322b]',
-    muted: 'border-hair text-muted',
+    ok: 'border-[#2c6549]/25 bg-[#2c6549]/[0.08] text-[#215039]',
+    warn: 'border-[#9a6a10]/25 bg-[#9a6a10]/[0.10] text-[#7d5609]',
+    bad: 'border-[#a8322b]/25 bg-[#a8322b]/[0.08] text-[#8c2922]',
+    muted: 'border-[#dde3ea] bg-[#f2f5f8] text-muted',
   }[tone]
   return (
-    <span className={`inline-block whitespace-nowrap rounded-sm border px-1.5 py-0.5 text-[10px] uppercase tracking-wide ${c}`}>
+    <span className={`inline-block whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${c}`}>
       {children}
     </span>
   )
