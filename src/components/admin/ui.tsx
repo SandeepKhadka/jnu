@@ -381,3 +381,64 @@ export function Modal({
     </div>
   )
 }
+
+/**
+ * The pagination control every list screen uses.
+ *
+ * Always states the range and the total ("26–50 of 312") rather than only a
+ * page number: on a register of students the question is nearly always "how
+ * many are there", and the answer should not require arithmetic.
+ *
+ * Renders nothing when everything fits on one page — a disabled pager under a
+ * six-row table is noise.
+ */
+export function Pagination({
+  page,
+  total,
+  pageSize,
+  onPage,
+  unit = 'records',
+}: {
+  page: number
+  total: number
+  pageSize: number
+  onPage: (p: number) => void
+  unit?: string
+}) {
+  const pages = Math.max(1, Math.ceil(total / pageSize))
+  if (total <= pageSize) {
+    return total > 0 ? (
+      <p className="m-0 mt-3 text-[12px] text-muted">
+        {total.toLocaleString('en-IN')} {unit}
+      </p>
+    ) : null
+  }
+
+  const from = (page - 1) * pageSize + 1
+  const to = Math.min(page * pageSize, total)
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-hair pt-3">
+      <p className="tnum m-0 text-[12px] text-muted">
+        {from.toLocaleString('en-IN')}–{to.toLocaleString('en-IN')} of {total.toLocaleString('en-IN')} {unit}
+      </p>
+      <div className="flex items-center gap-2">
+        <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => onPage(1)}>
+          « First
+        </Button>
+        <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => onPage(page - 1)}>
+          ‹ Previous
+        </Button>
+        <span className="tnum px-1 text-[12px] text-muted">
+          Page {page} of {pages}
+        </span>
+        <Button variant="secondary" size="sm" disabled={page >= pages} onClick={() => onPage(page + 1)}>
+          Next ›
+        </Button>
+        <Button variant="secondary" size="sm" disabled={page >= pages} onClick={() => onPage(pages)}>
+          Last »
+        </Button>
+      </div>
+    </div>
+  )
+}

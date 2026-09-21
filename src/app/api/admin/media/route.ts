@@ -10,16 +10,32 @@ export const dynamic = 'force-dynamic'
 const MEDIA_USERS = ['content.edit', 'branding.edit', 'exams.settings'] as const
 
 /** GET /api/admin/media?kind=IMAGE|DOCUMENT */
+const PAGE_SIZE = 24
+
+/** GET /api/admin/media?kind=&q=&page= — the media library, newest first. */
 export async function GET(req: Request) {
   try {
     await requireAny(...MEDIA_USERS)
-    const kind = new URL(req.url).searchParams.get('kind')
-    const rows = await db.media.findMany({
-      where: kind === 'IMAGE' || kind === 'DOCUMENT' ? { kind } : {},
-      orderBy: { createdAt: 'desc' },
-      take: 500,
-    })
-    return ok({ media: rows.map(toMediaItem) })
+    const url = new URL(req.url)
+    const kind = url.searchParams.get('kind')
+    const q = (url.searchParams.get('q') ?? '').trim()
+    const page = Math.max(1, Number.parseInt(url.searchParams.get('page') ?? '1', 10) || 1)
+
+    const where = {
+      ...(kind === 'IMAGE' || kind === 'DOCUMENT' ? { kind } : {}),
+      ...(q ? { OR: [{ filename: { contains: q } }, { alt: { contains: q } }] } : {}),
+    }
+
+    const [rows, total] = await Promise.all([
+      db.media.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
+      }),
+      db.media.count({ where }),
+    ])
+    return ok({ media: rows.map(toMediaItem), total, pageSize: PAGE_SIZE })
   } catch (e) {
     return handleError(e)
   }

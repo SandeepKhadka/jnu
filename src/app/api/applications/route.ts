@@ -11,12 +11,37 @@ import { getAllProgrammeNames } from '@/lib/content'
 export const dynamic = 'force-dynamic'
 
 /** GET /api/applications — staff only. */
-export async function GET() {
+const PAGE_SIZE = 25
+
+/** GET /api/applications?q=&status=&page= — the admissions queue, newest first. */
+export async function GET(req: Request) {
   try {
     await requirePermission('applications.manage')
-    const rows = await db.application.findMany({
+    const url = new URL(req.url)
+    const q = (url.searchParams.get('q') ?? '').trim()
+    const status = url.searchParams.get('status') ?? ''
+    const page = Math.max(1, Number.parseInt(url.searchParams.get('page') ?? '1', 10) || 1)
+
+    const where = {
+      ...(status ? { status } : {}),
+      ...(q
+        ? {
+            OR: [
+              { applicationNo: { contains: q.toUpperCase() } },
+              { fullName: { contains: q } },
+              { mobile: { contains: q } },
+              { email: { contains: q } },
+            ],
+          }
+        : {}),
+    }
+
+    const [rows, total] = await Promise.all([
+      db.application.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
-      take: 200,
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
       select: {
         id: true,
         applicationNo: true,
@@ -43,8 +68,10 @@ export async function GET() {
         remarks: true,
         createdAt: true,
       },
-    })
-    return ok({ applications: rows })
+      }),
+      db.application.count({ where }),
+    ])
+    return ok({ applications: rows, total, pageSize: PAGE_SIZE })
   } catch (e) {
     return handleError(e)
   }

@@ -12,6 +12,7 @@ import {
   Loading,
   Modal,
   PageHeader,
+  Pagination,
   Pill,
   Row,
   Select,
@@ -103,7 +104,6 @@ export default function StudentsPage() {
               }}
             />
           </Field>
-          <span className="pb-2 text-[12px] text-muted">{total} student(s)</span>
         </div>
 
         {rows === null ? (
@@ -148,19 +148,7 @@ export default function StudentsPage() {
           </Table>
         )}
 
-        {total > 25 ? (
-          <div className="mt-3 flex items-center gap-2">
-            <Button variant="secondary" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
-              Previous
-            </Button>
-            <span className="text-[12px] text-muted">
-              Page {page} of {Math.ceil(total / 25)}
-            </span>
-            <Button variant="secondary" size="sm" disabled={page >= Math.ceil(total / 25)} onClick={() => setPage(page + 1)}>
-              Next
-            </Button>
-          </div>
-        ) : null}
+        <Pagination page={page} total={total} pageSize={25} onPage={setPage} unit="students" />
       </Card>
 
       {adding ? (

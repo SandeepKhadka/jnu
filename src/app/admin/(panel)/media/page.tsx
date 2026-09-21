@@ -11,8 +11,11 @@ import {
   Empty,
   Input,
   Loading,
+  Field,
   PageHeader,
+  Pagination,
   Pill,
+  Select,
   StatusLine,
   useStatus,
 } from '@/components/admin/ui'
@@ -20,16 +23,26 @@ import {
 /** Everything uploaded for the website: images and PDFs. */
 export default function MediaLibrary() {
   const [items, setItems] = useState<MediaItem[] | null>(null)
+  const [total, setTotal] = useState(0)
+  const [pageSize, setPageSize] = useState(24)
+  const [page, setPage] = useState(1)
+  const [q, setQ] = useState('')
+  const [kind, setKind] = useState('')
   const [busy, setBusy] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const { status, show, saved } = useStatus()
 
   const load = useCallback(async () => {
-    const res = await getJson<{ media: MediaItem[] }>('/api/admin/media')
-    if (res.ok) setItems(res.data.media)
-    else show({ tone: 'error', text: res.error })
+    const res = await getJson<{ media: MediaItem[]; total: number; pageSize: number }>(
+      `/api/admin/media?q=${encodeURIComponent(q)}&kind=${kind}&page=${page}`
+    )
+    if (res.ok) {
+      setItems(res.data.media)
+      setTotal(res.data.total)
+      setPageSize(res.data.pageSize)
+    } else show({ tone: 'error', text: res.error })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [q, kind, page])
 
   useEffect(() => {
     void load()
@@ -47,6 +60,7 @@ export default function MediaLibrary() {
       }
     }
     setBusy(false)
+    setPage(1)
     await load()
   }
 
@@ -85,11 +99,41 @@ export default function MediaLibrary() {
         }}
       />
 
+      <Card>
+        <div className="flex flex-wrap items-end gap-3">
+          <Field label="Search">
+            <Input
+              placeholder="File name or alt text"
+              value={q}
+              onChange={(e) => {
+                setPage(1)
+                setQ(e.target.value)
+              }}
+              className="min-w-[280px]"
+            />
+          </Field>
+          <Field label="Type">
+            <Select
+              value={kind}
+              options={[
+                { value: '', label: 'All' },
+                { value: 'IMAGE', label: 'Images' },
+                { value: 'DOCUMENT', label: 'PDFs' },
+              ]}
+              onChange={(e) => {
+                setPage(1)
+                setKind(e.target.value)
+              }}
+            />
+          </Field>
+        </div>
+      </Card>
+
       {items === null ? (
         <Loading />
       ) : items.length === 0 ? (
         <Card>
-          <Empty>Nothing uploaded yet.</Empty>
+          <Empty>{q || kind ? 'Nothing matches those filters.' : 'Nothing uploaded yet.'}</Empty>
         </Card>
       ) : (
         <Card>

@@ -1,97 +1,85 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { listAudit, type AuditEntry } from '@/lib/store'
+import { useCallback, useEffect, useState } from 'react'
+
+import { getJson } from '@/lib/admin-client'
+import { Card, Field, Input, Loading, Pagination, Table, Td } from '@/components/admin/ui'
+
+type Entry = { id: string; at: string; actorEmail: string; action: string; detail: string }
 
 /**
- * Append-only trail of every result and certificate change, read from the
- * database.
+ * Append-only trail of every change, read from the database.
  *
- * Worth having even in a project: results and certificate records are exactly
- * the data most worth tampering with, and "who changed this, and when" is the
- * first question anyone asks afterwards. Entries are written server-side by
- * the API routes, so they cannot be edited or cleared from the browser.
+ * Results and certificate records are exactly the data most worth tampering
+ * with, and "who changed this, and when" is the first question anyone asks
+ * afterwards. Entries are written server-side by the API routes, so they
+ * cannot be edited or cleared from the browser — there is deliberately no
+ * delete control on this screen.
  */
 export function AuditLog() {
-  const [rows, setRows] = useState<AuditEntry[]>([])
-  const [loading, setLoading] = useState(true)
+  const [rows, setRows] = useState<Entry[] | null>(null)
+  const [total, setTotal] = useState(0)
+  const [pageSize, setPageSize] = useState(25)
+  const [page, setPage] = useState(1)
+  const [q, setQ] = useState('')
+
+  const load = useCallback(async () => {
+    const res = await getJson<{ entries: Entry[]; total: number; pageSize: number }>(
+      `/api/audit?q=${encodeURIComponent(q)}&page=${page}`
+    )
+    if (res.ok) {
+      setRows(res.data.entries)
+      setTotal(res.data.total)
+      setPageSize(res.data.pageSize)
+    } else {
+      setRows([])
+    }
+  }, [q, page])
 
   useEffect(() => {
-    let cancelled = false
-    listAudit().then((entries) => {
-      if (cancelled) return
-      setRows(entries)
-      setLoading(false)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
+    void load()
+  }, [load])
 
   return (
-    <div className="space-y-6">
-      <div className="panel">
-        <h2 className="panel-head m-0 flex items-center justify-between">
-          <span>Audit Log</span>
-          <span className="tnum text-[11px] font-normal text-muted">
-            {loading ? 'loading…' : `${rows.length} entries`}
-          </span>
-        </h2>
-        <div className="panel-body p-0">
-          {loading ? (
-            <p className="m-0 px-4 py-6 text-[13px] text-muted">Loading…</p>
-          ) : rows.length === 0 ? (
-            <p className="m-0 px-4 py-6 text-[13px] text-muted">
-              No changes recorded yet. Add, publish or revoke something and it will appear
-              here.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-[13px]">
-                <thead>
-                  <tr>
-                    <th className="border-b border-hair bg-shell px-3 py-2 text-left">When</th>
-                    <th className="border-b border-hair bg-shell px-3 py-2 text-left">Actor</th>
-                    <th className="border-b border-hair bg-shell px-3 py-2 text-left">Action</th>
-                    <th className="border-b border-hair bg-shell px-3 py-2 text-left">Detail</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r, i) => (
-                    <tr key={`${r.at}-${i}`}>
-                      <td className="tnum whitespace-nowrap border-b border-hair px-3 py-2 text-muted">
-                        {new Date(r.at).toLocaleString('en-IN')}
-                      </td>
-                      <td className="border-b border-hair px-3 py-2">{r.actor}</td>
-                      <td className="border-b border-hair px-3 py-2">
-                        <code className="text-[12px]">{r.action}</code>
-                      </td>
-                      <td className="border-b border-hair px-3 py-2 text-muted">{r.detail}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+    <Card>
+      <div className="mb-3 flex flex-wrap items-end gap-3">
+        <Field label="Search the trail">
+          <Input
+            placeholder="Who, what, or any word in the detail"
+            value={q}
+            onChange={(e) => {
+              setPage(1)
+              setQ(e.target.value)
+            }}
+            className="min-w-[320px]"
+          />
+        </Field>
       </div>
 
-      <div className="panel border-l-[3px] border-l-sand-500">
-        <h2 className="panel-head m-0">Resetting the demo data</h2>
-        <div className="panel-body">
-          <p className="m-0 mb-2 text-[13px] text-muted">
-            Data now lives in the database rather than the browser, so resetting is a
-            command rather than a button:
-          </p>
-          <pre className="m-0 overflow-x-auto rounded border border-hair bg-shell p-3 text-[12px]">
-            npm run db:reset
-          </pre>
-          <p className="m-0 mt-2 text-[12px] text-muted">
-            That drops the database, re-applies the migrations and re-seeds it. Run it
-            before demonstrating the project to someone.
-          </p>
-        </div>
-      </div>
-    </div>
+      {rows === null ? (
+        <Loading />
+      ) : rows.length === 0 ? (
+        <p className="m-0 text-[13px] text-muted">
+          {q ? 'Nothing in the trail matches that.' : 'No changes recorded yet. Save something and it appears here.'}
+        </p>
+      ) : (
+        <Table head={['When', 'Who', 'Action', 'Detail']}>
+          {rows.map((r) => (
+            <tr key={r.id}>
+              <Td className="tnum whitespace-nowrap text-muted">
+                {new Date(r.at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+              </Td>
+              <Td className="whitespace-nowrap">{r.actorEmail}</Td>
+              <Td>
+                <code className="text-[12px]">{r.action}</code>
+              </Td>
+              <Td className="text-muted">{r.detail}</Td>
+            </tr>
+          ))}
+        </Table>
+      )}
+
+      <Pagination page={page} total={total} pageSize={pageSize} onPage={setPage} unit="entries" />
+    </Card>
   )
 }

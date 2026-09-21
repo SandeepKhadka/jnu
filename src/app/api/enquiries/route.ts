@@ -6,11 +6,40 @@ import { ok, fail, handleError, readJson } from '@/lib/api'
 export const dynamic = 'force-dynamic'
 
 /** GET /api/enquiries — staff only. */
-export async function GET() {
+const PAGE_SIZE = 25
+
+/** GET /api/enquiries?q=&handled=&page= — contact-form submissions, newest first. */
+export async function GET(req: Request) {
   try {
     await requirePermission('enquiries.manage')
-    const rows = await db.enquiry.findMany({ orderBy: { createdAt: 'desc' }, take: 200 })
-    return ok({ enquiries: rows })
+    const url = new URL(req.url)
+    const q = (url.searchParams.get('q') ?? '').trim()
+    const handled = url.searchParams.get('handled')
+    const page = Math.max(1, Number.parseInt(url.searchParams.get('page') ?? '1', 10) || 1)
+
+    const where = {
+      ...(handled === 'true' || handled === 'false' ? { handled: handled === 'true' } : {}),
+      ...(q
+        ? {
+            OR: [
+              { name: { contains: q } },
+              { email: { contains: q } },
+              { message: { contains: q } },
+            ],
+          }
+        : {}),
+    }
+
+    const [rows, total] = await Promise.all([
+      db.enquiry.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
+      }),
+      db.enquiry.count({ where }),
+    ])
+    return ok({ enquiries: rows, total, pageSize: PAGE_SIZE })
   } catch (e) {
     return handleError(e)
   }

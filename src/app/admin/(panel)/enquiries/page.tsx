@@ -3,7 +3,19 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { del, getJson, patchJson } from '@/lib/admin-client'
-import { Button, Card, ConfirmButton, Loading, PageHeader, Pill, StatusLine, useStatus } from '@/components/admin/ui'
+import {
+  Button,
+  Card,
+  ConfirmButton,
+  Field,
+  Input,
+  Loading,
+  PageHeader,
+  Pagination,
+  Pill,
+  StatusLine,
+  useStatus,
+} from '@/components/admin/ui'
 import { formatNoticeDate } from '@/lib/content-types'
 
 type Enquiry = {
@@ -20,22 +32,32 @@ type Enquiry = {
 /** Messages sent through the contact form. */
 export default function EnquiriesPage() {
   const [rows, setRows] = useState<Enquiry[] | null>(null)
+  const [total, setTotal] = useState(0)
+  const [pageSize, setPageSize] = useState(25)
+  const [page, setPage] = useState(1)
+  const [q, setQ] = useState('')
   const [showHandled, setShowHandled] = useState(false)
   const { status, show } = useStatus()
 
+  // Answered enquiries are filtered in the query, not in the browser, so the
+  // page count matches what is actually shown.
   const load = useCallback(async () => {
-    const res = await getJson<{ enquiries: Enquiry[] }>('/api/enquiries')
-    if (res.ok) setRows(res.data.enquiries)
-    else show({ tone: 'error', text: res.error })
+    const res = await getJson<{ enquiries: Enquiry[]; total: number; pageSize: number }>(
+      `/api/enquiries?q=${encodeURIComponent(q)}&page=${page}${showHandled ? '' : '&handled=false'}`
+    )
+    if (res.ok) {
+      setRows(res.data.enquiries)
+      setTotal(res.data.total)
+      setPageSize(res.data.pageSize)
+    } else show({ tone: 'error', text: res.error })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [q, page, showHandled])
 
   useEffect(() => {
     void load()
   }, [load])
 
-  if (rows === null) return <Loading />
-  const visible = showHandled ? rows : rows.filter((r) => !r.handled)
+  const visible = rows ?? []
 
   return (
     <div>
@@ -43,14 +65,36 @@ export default function EnquiriesPage() {
         title="Enquiries"
         description="Sent from the contact page. Mark one as answered once you have replied by email or telephone."
         actions={
-          <Button variant="secondary" onClick={() => setShowHandled((v) => !v)}>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setPage(1)
+              setShowHandled((v) => !v)
+            }}
+          >
             {showHandled ? 'Hide answered' : 'Show answered'}
           </Button>
         }
       />
       <StatusLine status={status} />
 
-      {visible.length === 0 ? (
+      <Card>
+        <Field label="Search">
+          <Input
+            placeholder="Name, email address or any word in the message"
+            value={q}
+            onChange={(e) => {
+              setPage(1)
+              setQ(e.target.value)
+            }}
+            className="min-w-[320px]"
+          />
+        </Field>
+      </Card>
+
+      {rows === null ? (
+        <Loading />
+      ) : visible.length === 0 ? (
         <Card>
           <p className="m-0 text-[13px] text-muted">Nothing waiting.</p>
         </Card>
@@ -108,6 +152,8 @@ export default function EnquiriesPage() {
           </Card>
         ))
       )}
+
+      <Pagination page={page} total={total} pageSize={pageSize} onPage={setPage} unit="enquiries" />
     </div>
   )
 }

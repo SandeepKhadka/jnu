@@ -11,6 +11,7 @@ import {
   Loading,
   Modal,
   PageHeader,
+  Pagination,
   Pill,
   Row,
   Select,
@@ -58,21 +59,29 @@ const STATUSES = ['SUBMITTED', 'UNDER_REVIEW', 'ACCEPTED', 'REJECTED']
 /** Admission applications submitted from the website. */
 export default function ApplicationsPage() {
   const [rows, setRows] = useState<AppRow[] | null>(null)
+  const [total, setTotal] = useState(0)
+  const [pageSize, setPageSize] = useState(25)
+  const [page, setPage] = useState(1)
+  const [q, setQ] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
   const [openId, setOpenId] = useState<string | null>(null)
   const { status, show } = useStatus()
 
   const load = useCallback(async () => {
-    const res = await getJson<{ applications: AppRow[] }>('/api/applications')
-    if (res.ok) setRows(res.data.applications)
-    else show({ tone: 'error', text: res.error })
+    const res = await getJson<{ applications: AppRow[]; total: number; pageSize: number }>(
+      `/api/applications?q=${encodeURIComponent(q)}&status=${statusFilter}&page=${page}`
+    )
+    if (res.ok) {
+      setRows(res.data.applications)
+      setTotal(res.data.total)
+      setPageSize(res.data.pageSize)
+    } else show({ tone: 'error', text: res.error })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [q, statusFilter, page])
 
   useEffect(() => {
     void load()
   }, [load])
-
-  if (rows === null) return <Loading />
 
   return (
     <div>
@@ -80,8 +89,39 @@ export default function ApplicationsPage() {
       <StatusLine status={status} />
 
       <Card>
-        {rows.length === 0 ? (
-          <p className="m-0 text-[13px] text-muted">No applications yet.</p>
+        <div className="mb-3 flex flex-wrap items-end gap-3">
+          <Field label="Search">
+            <Input
+              placeholder="Application number, name, mobile or email"
+              value={q}
+              onChange={(e) => {
+                setPage(1)
+                setQ(e.target.value)
+              }}
+              className="min-w-[300px]"
+            />
+          </Field>
+          <Field label="Stage">
+            <Select
+              value={statusFilter}
+              options={[
+                { value: '', label: 'All' },
+                ...STATUSES.map((v) => ({ value: v, label: v.replace(/_/g, ' ').toLowerCase() })),
+              ]}
+              onChange={(e) => {
+                setPage(1)
+                setStatusFilter(e.target.value)
+              }}
+            />
+          </Field>
+        </div>
+
+        {rows === null ? (
+          <Loading />
+        ) : rows.length === 0 ? (
+          <p className="m-0 text-[13px] text-muted">
+            {q || statusFilter ? 'No applications match.' : 'No applications yet.'}
+          </p>
         ) : (
           <Table head={['Application no.', 'Applicant', 'Programme', 'Contact', 'Received', 'Status', '']}>
             {rows.map((a) => (
@@ -114,6 +154,8 @@ export default function ApplicationsPage() {
             ))}
           </Table>
         )}
+
+        <Pagination page={page} total={total} pageSize={pageSize} onPage={setPage} unit="applications" />
       </Card>
 
       {openId ? (

@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { cache as perRequest } from 'react'
 import { unstable_cache } from 'next/cache'
 
 import { db } from '@/lib/db'
@@ -14,6 +15,7 @@ import {
   FALLBACK_BRANDING,
   SETTING_DEFAULTS,
   SETTING_NORMALISERS,
+  isSettingKey,
   normaliseBlocks,
   normaliseCrumbs,
   type MenuItem,
@@ -43,6 +45,7 @@ const cached = <A extends unknown[], R>(fn: (...a: A) => Promise<R>, key: string
 
 /* ============================================================== settings */
 
+/** Uncached single-row read. Admin screens want the value as it is right now. */
 export async function readSetting<K extends SettingKey>(key: K): Promise<SettingValue[K]> {
   const row = await db.setting.findUnique({ where: { key } })
   if (!row) return SETTING_DEFAULTS[key]
@@ -53,26 +56,54 @@ export async function readSetting<K extends SettingKey>(key: K): Promise<Setting
   }
 }
 
-export const getSetting = cached(readSetting, 'setting') as <K extends SettingKey>(
-  key: K
-) => Promise<SettingValue[K]>
+/**
+ * All eight settings in one query.
+ *
+ * Rendering any page touches most of them — the shell alone wants site,
+ * branding, menu, footerLinks and recognition — and there are only eight rows
+ * in the table, so one findMany beats one findUnique per key. perRequest()
+ * then makes the header, the footer, the page and generateMetadata share a
+ * single read instead of each paying a cache lookup.
+ */
+const loadSettings = perRequest(
+  cached(async (): Promise<SettingValue> => {
+    const rows = await db.setting.findMany()
+    const out = { ...SETTING_DEFAULTS }
+    for (const row of rows) {
+      if (!isSettingKey(row.key)) continue
+      try {
+        out[row.key] = SETTING_NORMALISERS[row.key](JSON.parse(row.value)) as never
+      } catch {
+        // Leave the default in place; a corrupt row must not blank the site.
+      }
+    }
+    return out
+  }, 'settings')
+)
+
+export async function getSetting<K extends SettingKey>(key: K): Promise<SettingValue[K]> {
+  return (await loadSettings())[key]
+}
 
 export const getSite = () => getSetting('site')
 
 /* ============================================================== branding */
 
-async function mediaVariants(id: string | null) {
-  if (!id) return null
-  const m = await db.media.findUnique({ where: { id } })
-  if (!m || m.kind !== 'IMAGE') return null
-  return { variants: parseVariants(m.variants), width: m.width ?? 0, height: m.height ?? 0 }
-}
-
 async function readBranding(): Promise<ResolvedBranding> {
-  const b = await readSetting('branding')
+  const b = await getSetting('branding')
   const out: ResolvedBranding = JSON.parse(JSON.stringify(FALLBACK_BRANDING))
 
-  const logo = await mediaVariants(b.logoId)
+  // Logo, crest and OG image in one query rather than three round trips.
+  const ids = [b.logoId, b.crestId, b.ogImageId].filter((v): v is string => !!v)
+  const rows = ids.length
+    ? await db.media.findMany({ where: { id: { in: ids }, kind: 'IMAGE' } })
+    : []
+  const mediaVariants = (id: string | null) => {
+    const m = id ? rows.find((r) => r.id === id) : null
+    return m ? { variants: parseVariants(m.variants), width: m.width ?? 0, height: m.height ?? 0 } : null
+  }
+
+  const logo = mediaVariants(b.logoId)
   if (logo && logo.variants.length) {
     const f = fallbackFormat(logo.variants)
     // Header shows the lockup ~56px tall; keep the intrinsic ratio.
@@ -85,16 +116,16 @@ async function readBranding(): Promise<ResolvedBranding> {
     }
   }
 
-  const crest = await mediaVariants(b.crestId)
+  const crest = mediaVariants(b.crestId)
   if (crest) out.crest = pickVariant(crest.variants, 320)?.path ?? out.crest
 
-  const og = await mediaVariants(b.ogImageId)
+  const og = mediaVariants(b.ogImageId)
   if (og) out.ogImage = pickVariant(og.variants, 1200)?.path ?? out.ogImage
 
   return out
 }
 
-export const getBranding = cached(readBranding, 'branding')
+export const getBranding = perRequest(cached(readBranding, 'branding'))
 
 /* ======================================================= programmes */
 
@@ -131,7 +162,7 @@ async function readFaculties(includeUnpublished: boolean): Promise<FacultyDTO[]>
   }))
 }
 
-export const getFaculties = cached(() => readFaculties(false), 'faculties')
+export const getFaculties = perRequest(cached(() => readFaculties(false), 'faculties'))
 export const getFacultiesAdmin = () => readFaculties(true)
 
 export async function getFaculty(slug: string): Promise<FacultyDTO | undefined> {
@@ -226,7 +257,7 @@ async function readNotices(includeUnpublished: boolean): Promise<NoticeDTO[]> {
   )
 }
 
-export const getNotices = cached(() => readNotices(false), 'notices')
+export const getNotices = perRequest(cached(() => readNotices(false), 'notices'))
 export const getNoticesAdmin = () => readNotices(true)
 
 /* ======================================================= slides, gallery */
@@ -251,7 +282,7 @@ async function readSlides(includeDisabled: boolean): Promise<SlideDTO[]> {
   }))
 }
 
-export const getSlides = cached(() => readSlides(false), 'slides')
+export const getSlides = perRequest(cached(() => readSlides(false), 'slides'))
 export const getSlidesAdmin = () => readSlides(true)
 
 async function readGallery(includeUnpublished: boolean): Promise<GalleryCategoryDTO[]> {
@@ -286,13 +317,13 @@ async function readGallery(includeUnpublished: boolean): Promise<GalleryCategory
   }))
 }
 
-export const getGallery = cached(() => readGallery(false), 'gallery')
+export const getGallery = perRequest(cached(() => readGallery(false), 'gallery'))
 export const getGalleryAdmin = () => readGallery(true)
 
 /* ================================================================= menu */
 
 /** The menu with any `auto: 'faculties'` item expanded to the live faculties. */
-export async function getResolvedMenu(): Promise<MenuItem[]> {
+export const getResolvedMenu = perRequest(async function getResolvedMenu(): Promise<MenuItem[]> {
   const [menu, faculties] = await Promise.all([getSetting('menu'), getFaculties()])
   return menu.map((item) =>
     item.auto === 'faculties'
@@ -305,4 +336,4 @@ export async function getResolvedMenu(): Promise<MenuItem[]> {
         }
       : item
   )
-}
+})
