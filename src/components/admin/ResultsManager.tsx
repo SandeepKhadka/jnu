@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { getJson } from '@/lib/admin-client'
+import { Modal } from './ui'
 import {
   listResults,
   addResult,
+  updateResult,
   setResultPublished,
   deleteResult,
   importResults,
@@ -52,6 +54,7 @@ export function ResultsManager() {
   const [form, setForm] = useState(emptyForm)
   const [busy, setBusy] = useState(false)
   const [filter, setFilter] = useState('')
+  const [editing, setEditing] = useState<ResultRecord | null>(null)
   const [msg, setMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
 
   async function load() {
@@ -105,6 +108,23 @@ export function ResultsManager() {
         : `${row.roll_no} is now visible on the results page.`,
     })
     load()
+  }
+
+  /**
+   * A published result is read-only on purpose: its marksheet may already be
+   * printed with a serial that must keep verifying against these figures.
+   * Rather than hide the button, say why and name the way round it.
+   */
+  function startEdit(row: ResultRecord) {
+    setMsg(null)
+    if (row.published) {
+      setMsg({
+        tone: 'err',
+        text: `Unpublish ${row.roll_no} before editing it. A published result may already be printed with a serial that must keep matching the record.`,
+      })
+      return
+    }
+    setEditing(row)
   }
 
   async function remove(row: ResultRecord) {
@@ -348,6 +368,9 @@ export function ResultsManager() {
                         </span>
                       </td>
                       <td className="whitespace-nowrap border-b border-hair px-3 py-2 text-right">
+                        <button type="button" onClick={() => startEdit(r)} className="mr-3 text-jnu-600 underline">
+                          Edit
+                        </button>
                         <button type="button" onClick={() => togglePublish(r)} className="mr-3 text-jnu-600 underline">
                           {r.published ? 'Unpublish' : 'Publish'}
                         </button>
@@ -363,7 +386,106 @@ export function ResultsManager() {
           </div>
         </div>
       </div>
+      {editing ? (
+        <EditResultModal
+          row={editing}
+          programmeNames={programmeNames}
+          onClose={() => setEditing(null)}
+          onSaved={(text) => {
+            setEditing(null)
+            setMsg({ tone: 'ok', text })
+            load()
+          }}
+        />
+      ) : null}
     </div>
+  )
+}
+
+/**
+ * Editing a draft result. The roll number is deliberately not editable: it is
+ * half of the student's login credential and the key the result is matched
+ * on. A result filed against the wrong student is a delete and a re-entry,
+ * not an edit, so the audit trail shows both.
+ */
+function EditResultModal({
+  row,
+  programmeNames,
+  onClose,
+  onSaved,
+}: {
+  row: ResultRecord
+  programmeNames: string[]
+  onClose: () => void
+  onSaved: (text: string) => void
+}) {
+  const [form, setForm] = useState({
+    student_name: row.student_name,
+    programme: row.programme,
+    semester: row.semester,
+    exam_session: row.exam_session,
+    status: row.status,
+    marks_obtained: String(row.marks_obtained),
+    marks_max: String(row.marks_max),
+    sgpa: String(row.sgpa),
+  })
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function save() {
+    if (!form.student_name.trim()) {
+      setError('Student name is required.')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    const res = await updateResult(row.id, {
+      student_name: form.student_name.trim(),
+      programme: form.programme,
+      semester: form.semester,
+      exam_session: form.exam_session,
+      subjects: row.subjects,
+      marks_obtained: Number(form.marks_obtained) || 0,
+      marks_max: Number(form.marks_max) || 0,
+      sgpa: Number(form.sgpa) || 0,
+      status: form.status,
+      published_at: row.published_at,
+      serial: row.serial,
+    })
+    setBusy(false)
+    if (!res.ok) {
+      setError(res.error)
+      return
+    }
+    onSaved(`Updated ${row.roll_no}. It is still a draft — publish it when the figures are right.`)
+  }
+
+  return (
+    <Modal title={`Edit result — ${row.roll_no}`} onClose={onClose} wide>
+      {error ? (
+        <p role="alert" className="m-0 mb-3 rounded border border-[#a8322b]/40 bg-[#a8322b]/5 px-3 py-2 text-[13px] text-[#a8322b]">
+          {error}
+        </p>
+      ) : null}
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <Text id="edit_student_name" label="Student Name" value={form.student_name} onChange={(v) => setForm({ ...form, student_name: v })} />
+        <Select id="edit_programme" label="Programme" value={form.programme} onChange={(v) => setForm({ ...form, programme: v })} options={programmeNames} />
+        <Select id="edit_semester" label="Semester" value={form.semester} onChange={(v) => setForm({ ...form, semester: v })} options={SEMESTERS} />
+        <Text id="edit_exam_session" label="Exam Session" value={form.exam_session} onChange={(v) => setForm({ ...form, exam_session: v })} />
+        <Select id="edit_status" label="Status" value={form.status} onChange={(v) => setForm({ ...form, status: v as ResultRecord['status'] })} options={['PASS', 'FAIL', 'ATKT', 'WITHHELD']} />
+        <Text id="edit_marks_obtained" label="Marks Obtained" value={form.marks_obtained} onChange={(v) => setForm({ ...form, marks_obtained: v })} />
+        <Text id="edit_marks_max" label="Maximum Marks" value={form.marks_max} onChange={(v) => setForm({ ...form, marks_max: v })} />
+        <Text id="edit_sgpa" label="SGPA" value={form.sgpa} onChange={(v) => setForm({ ...form, sgpa: v })} />
+      </div>
+
+      <p className="m-0 mt-3 text-xs text-muted">
+        Roll number cannot be changed here. Obtained marks may not exceed the maximum.
+      </p>
+      <button type="button" onClick={save} disabled={busy} className="btn btn-primary mt-3">
+        {busy ? 'Saving…' : 'Save changes'}
+      </button>
+    </Modal>
   )
 }
 

@@ -130,6 +130,7 @@ function SlideCard({
   onDelete: () => void
 }) {
   const [draft, setDraft] = useState(slide)
+  const [replacing, setReplacing] = useState(false)
   useEffect(() => setDraft(slide), [slide])
 
   return (
@@ -152,13 +153,18 @@ function SlideCard({
       }
     >
       <div className="flex flex-wrap gap-4">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={pickVariant(slide.variants, 640)?.path ?? ''}
-          alt=""
-          className="h-28 w-56 shrink-0 rounded border border-hair object-cover"
-          style={slide.banner ? { objectFit: 'contain', background: slide.bannerBackground ?? '#fff' } : undefined}
-        />
+        <div className="shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={pickVariant(slide.variants, 640)?.path ?? ''}
+            alt=""
+            className="h-28 w-56 rounded border border-hair object-cover"
+            style={slide.banner ? { objectFit: 'contain', background: slide.bannerBackground ?? '#fff' } : undefined}
+          />
+          <Button variant="secondary" size="sm" className="mt-2 w-full" onClick={() => setReplacing(true)}>
+            Replace image
+          </Button>
+        </div>
         <div className="min-w-[280px] flex-1 space-y-3">
           <Field
             label="Description (alt text)"
@@ -194,6 +200,20 @@ function SlideCard({
           </div>
         </div>
       </div>
+
+      {replacing ? (
+        <MediaPicker
+          title="Replace the slide image"
+          onClose={() => setReplacing(false)}
+          onPick={(m) => {
+            setReplacing(false)
+            // Saved immediately rather than folded into the draft: swapping the
+            // picture is the edit, and leaving it pending behind a Save button
+            // reads as though it did not take.
+            onSave({ ...draft, mediaId: m.id })
+          }}
+        />
+      ) : null}
     </Card>
   )
 }
