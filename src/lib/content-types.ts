@@ -377,6 +377,7 @@ export const DEFAULT_MENU: MenuItem[] = [
       { label: 'Infrastructure', href: '/about/infrastructure/' },
       { label: 'Academic Council', href: '/about/academic-council/' },
       { label: 'Accreditation & Approvals', href: '/about/accreditation/' },
+      { label: 'Affiliations', href: '/affiliations/' },
       { label: 'Achievers', href: '/about/achievers/' },
       { label: 'Community Programme', href: '/about/community-programme/' },
     ],
