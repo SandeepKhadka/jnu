@@ -6,6 +6,7 @@ import {
   SETTING_NORMALISERS,
   isSettingKey,
   recognitionProblem,
+  type DocumentList,
   type Recognition,
   type SettingKey,
 } from '@/lib/content-types'
@@ -26,6 +27,9 @@ const ACCESS: Record<SettingKey, { write: Permission; read: Permission[] }> = {
   examinations: { write: 'exams.settings', read: ['exams.settings'] },
   // Readable by anyone who can print a degree, since printing needs it.
   certificateLayout: { write: 'exams.settings', read: ['exams.settings', 'certificates.issue'] },
+  popupNotice: { write: 'content.edit', read: ['content.edit'] },
+  affiliations: { write: 'content.edit', read: ['content.edit'] },
+  syllabus: { write: 'content.edit', read: ['content.edit'] },
 }
 
 async function mediaUrl(id: string | null, width: number): Promise<string | null> {
@@ -50,6 +54,19 @@ async function extras(key: SettingKey, value: unknown) {
         ogImageId: await mediaUrl(v.ogImageId, 640),
       },
     }
+  }
+  if (key === 'affiliations' || key === 'syllabus') {
+    // Filenames for the attached PDFs, so the editor shows what is attached
+    // rather than an opaque id.
+    const ids = (value as DocumentList).rows
+      .map((r) => r.documentId)
+      .filter((v): v is string => !!v)
+    if (ids.length === 0) return { documentNames: {} }
+    const rows = await db.media.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, filename: true },
+    })
+    return { documentNames: Object.fromEntries(rows.map((m) => [m.id, m.filename])) }
   }
   return {}
 }
@@ -96,6 +113,18 @@ export async function PUT(req: Request, ctx: { params: Promise<{ key: string }> 
       for (const id of ids) {
         if (!(await db.media.findUnique({ where: { id }, select: { id: true } }))) {
           return fail('A selected image no longer exists. Choose it again.')
+        }
+      }
+    }
+
+    // Same rule for attached PDFs: a row pointing at a deleted document
+    // would render a View link that 404s.
+    if (key === 'affiliations' || key === 'syllabus') {
+      const ids = [...new Set((value as DocumentList).rows.map((r) => r.documentId).filter((v): v is string => !!v))]
+      if (ids.length) {
+        const found = await db.media.count({ where: { id: { in: ids } } })
+        if (found !== ids.length) {
+          return fail('An attached document no longer exists. Attach it again.')
         }
       }
     }

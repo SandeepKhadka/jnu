@@ -286,6 +286,50 @@ model Upload {
   applicationPhotos         Application[] @relation("ApplicationPhoto")
   applicationAadhaars       Application[] @relation("ApplicationAadhaar")
   applicationQualifications Application[] @relation("ApplicationQualification")
+  counsellingPhotos         Counselling[] @relation("CounsellingPhoto")
+  counsellingAadhaars       Counselling[] @relation("CounsellingAadhaar")
+}
+
+/// A request for online counselling, submitted from the public site.
+///
+/// This is lead capture, not an admission: nobody has applied to anything
+/// yet. That is why every document is optional and no Aadhaar number is
+/// taken at all. Under the DPDP Act 2023 the lawful amount of personal data
+/// is the amount the purpose needs, and the purpose here is for a counsellor
+/// to ring someone back. Identity is established later, at admission, by
+/// Application — which already collects and masks it properly.
+model Counselling {
+  id        String @id @default(cuid())
+  reference String @unique
+
+  /// The counsellor or consultancy submitting on the student's behalf.
+  counsellorName String
+
+  firstName String
+  lastName  String
+  email     String
+  mobile    String
+
+  state    String
+  district String
+  city     String
+
+  /// Optional supporting files, stored exactly as admission documents are:
+  /// outside public/, reachable only through /api/uploads/[id] behind a
+  /// session check.
+  photoId   String?
+  photo     Upload? @relation("CounsellingPhoto", fields: [photoId], references: [id], onDelete: SetNull)
+  aadhaarId String?
+  aadhaar   Upload? @relation("CounsellingAadhaar", fields: [aadhaarId], references: [id], onDelete: SetNull)
+
+  /// NEW | CONTACTED | CLOSED
+  status  String  @default("NEW")
+  remarks String?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([status])
 }
 
 /// Fixed-window rate limiting, in the database rather than in memory.

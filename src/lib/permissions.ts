@@ -54,6 +54,7 @@ export type Permission =
   // admissions
   | 'applications.manage'
   | 'enquiries.manage'
+  | 'counselling.manage' // online counselling requests from the public site
   // system
   | 'staff.manage'
   | 'audit.view'
@@ -79,6 +80,10 @@ const MATRIX: Record<Permission, Role[]> = {
 
   'applications.manage': ['admin', 'registrar'],
   'enquiries.manage': ['admin', 'registrar', 'editor'],
+  // Counselling requests can carry an identity document, so they sit with
+  // admissions rather than with general enquiries — an editor has no reason
+  // to see someone's Aadhaar scan.
+  'counselling.manage': ['admin', 'registrar'],
 
   'staff.manage': ['admin'],
   'audit.view': ['admin', 'registrar'],
