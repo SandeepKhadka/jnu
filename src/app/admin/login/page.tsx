@@ -3,7 +3,6 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import { LoginForm } from '@/components/admin/LoginForm'
-import { db } from '@/lib/db'
 import { getSessionUser } from '@/lib/auth'
 import { getBranding, getSite } from '@/lib/content'
 
@@ -17,7 +16,7 @@ export default async function LoginPage() {
   // that would bounce them there anyway.
   if (await getSessionUser()) redirect('/admin')
 
-  const [site, branding, staffCount] = await Promise.all([getSite(), getBranding(), db.staff.count()])
+  const [site, branding] = await Promise.all([getSite(), getBranding()])
 
   return (
     <div className="grid min-h-screen place-items-center bg-shell p-4">
@@ -35,18 +34,12 @@ export default async function LoginPage() {
           />
         </Link>
 
-        {staffCount === 0 ? (
-          <div className="mb-4 rounded border border-sand-500 bg-white p-4 text-[13px]">
-            <p className="m-0 font-semibold text-jnu-800">No administrator account exists yet</p>
-            <p className="m-0 mt-1 text-muted">
-              Create the first one on the server, then sign in here:
-            </p>
-            <code className="mt-2 block overflow-x-auto rounded bg-shell px-2 py-1.5 text-[12px]">
-              npm run admin:create -- --email you@university.in --name &quot;Your Name&quot;
-            </code>
-          </div>
-        ) : null}
-
+        {/*
+          No setup hint here. The page is public, and telling a visitor that
+          the system has no administrator yet — and naming the command that
+          creates one — is information only staff need. Setup instructions
+          live in the README.
+        */}
         <LoginForm />
 
         <p className="mt-4 text-center text-[12px] text-muted">
