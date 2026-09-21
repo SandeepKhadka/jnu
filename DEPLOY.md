@@ -16,23 +16,29 @@ Those files are written to a real filesystem (`MEDIA_DIR` and `UPLOAD_DIR`,
 see `src/lib/media.ts` and `src/lib/storage.ts`). They are **not** in the
 database and **not** in the repository.
 
-| | Vercel | Render (or a VPS) with a disk |
+| | Vercel + Blob | Render (or a VPS) with a disk |
 |---|---|---|
 | Site, pages, text editing | works | works |
 | Seeded images and PDFs | works — they live in `public/` and are committed | works |
-| **Newly uploaded files** | **lost** — ephemeral filesystem | **kept** — persistent disk |
+| **Newly uploaded files** | **kept** — in a private Blob store | **kept** — persistent disk |
+| Cost | free tier | disk needs a paid instance |
 
-On Vercel an upload appears to succeed and then disappears, usually within
-minutes. That is worse than an outright failure, because whoever uploaded it
-believes the work is saved. If the client will upload anything, use a host
-with a disk, or rewrite the two storage modules against object storage
-(S3, R2, Vercel Blob) — `src/lib/storage.ts` is written so that only its
-`put`/`get`/`remove` functions need to change.
+`src/lib/object-store.ts` picks its backend at runtime: local disk normally,
+Vercel Blob when `BLOB_READ_WRITE_TOKEN` or `BLOB_STORE_ID` is present. So
+development keeps working against the disk with no Vercel account, and the
+same code runs on both hosts.
+
+**The Blob store must be created PRIVATE.** A public store hands out URLs that
+work for anyone holding them, and this application stores Aadhaar documents
+and applicant photographs. Private blobs are readable only with the token,
+which is why both file routes still check a session first. Vercel fixes the
+access mode at creation — it cannot be changed later, so a public store means
+making a new one.
 
 **Render disks require a paid instance type.** A free instance cannot mount
-one. Check current pricing before committing to it.
-
-A `render.yaml` blueprint is included at the repository root.
+one, and attaching a disk also removes zero-downtime deploys and prevents
+scaling past one instance. A `render.yaml` blueprint is at the repository root
+if you go that way.
 
 ---
 
@@ -119,11 +125,12 @@ one thing to copy before any destructive change.
 3. Leave the build command alone — `package.json` already runs
    `prisma generate && prisma migrate deploy && next build`, so migrations are
    applied to the production database during the build
-4. Add three **Environment Variables**:
+4. Add four **Environment Variables**:
 
    | Name | Value |
    | --- | --- |
-   | `DATABASE_URL` | your Neon connection string |
+   | `DATABASE_URL` | the **pooled** Neon string (`-pooler` in the host) |
+   | `DIRECT_URL` | the **unpooled** Neon string — migrations use this |
    | `AUTH_SECRET` | a long random string — generate it below |
    | `NEXT_PUBLIC_SITE_URL` | `https://<your-project>.vercel.app` |
 
@@ -133,7 +140,18 @@ one thing to copy before any destructive change.
    node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
    ```
 
-5. **Deploy**
+5. **Create the Blob store, or uploads will not persist.**
+   Storage → **Create** → **Blob**, and choose **private** access. Then open
+   the store's **Projects** tab → **Connect to Project** and pick this project
+   for all environments. Vercel adds `BLOB_STORE_ID` and the OIDC token itself;
+   `src/lib/object-store.ts` sees them and switches from disk to Blob with no
+   code change.
+
+   Getting `private` wrong matters: the mode is fixed at creation, and a public
+   store would make every uploaded Aadhaar document readable by anyone with the
+   URL.
+
+6. **Deploy**
 
 ### 1.5 Seed the production database
 

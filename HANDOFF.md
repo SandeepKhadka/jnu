@@ -46,8 +46,10 @@ protect that, and they are documented in section 4. Do not undo them.
 | Icons | Hand-written inline SVG (`src/components/admin/icons.tsx`). **No icon package.** |
 
 Full dependency list is in `package.json`. The runtime dependency list is
-deliberately ten packages long (`sharp` is one of them — admin uploads need it
-at runtime, so it must not be moved back to `devDependencies`). Adding a dependency is a decision that needs
+deliberately eleven packages long (`sharp` is one of them — admin uploads need
+it at runtime, so it must not be moved back to `devDependencies`;
+`@vercel/blob` is imported lazily by `object-store.ts` and is only reached
+when Blob credentials are set). Adding a dependency is a decision that needs
 justifying, not a reflex.
 
 ---
@@ -172,6 +174,7 @@ var/media, var/uploads   Written at runtime. NOT under public/. Not in git
 | `admin-route.ts` | `requirePermission`, `body`, `s()`, `InputError`, `audit()` |
 | `admin-client.ts` | The browser-side fetch wrapper every admin screen uses |
 | `dashboard.ts` | Dashboard aggregation queries |
+| `object-store.ts` | Where uploaded bytes live: local disk, or a private Vercel Blob store. The only module that touches a filesystem or a storage SDK |
 | `media.ts` / `media-shared.ts` | sharp pipeline, variant storage, srcset helpers |
 | `marksheet.ts` / `marksheet-token.ts` | Marksheet generation and signed verify tokens |
 | `ratelimit.ts` | Database-backed rate limiting |
@@ -382,9 +385,23 @@ Uploads go through `sharp`:
 - **EXIF and GPS data stripped** — location data in photographs is a privacy leak
 - **Magic-byte sniffing**, not extension trust
 - **SVG rejected outright** (it is a script vector)
-- Written to `MEDIA_DIR` / `UPLOAD_DIR`, **never under `public/`** — anything
-  under `public/` is served to the world, and applicant documents must not be.
-  They are served instead through `/api/uploads/[id]` behind an auth check.
+- Written through `src/lib/object-store.ts`, **never under `public/`** —
+  anything under `public/` is served to the world, and applicant documents
+  must not be. They are served through `/api/uploads/[id]` behind an auth
+  check, and media through `/media/[id]/[name]`.
+
+**Where the bytes go.** `object-store.ts` picks its backend at runtime: local
+disk (`UPLOAD_DIR` / `MEDIA_DIR`) normally, and **Vercel Blob** when
+`BLOB_READ_WRITE_TOKEN` or `BLOB_STORE_ID` is set. Nothing else in the
+codebase knows the difference, so a developer with no Vercel account keeps
+working against the disk.
+
+⚠️ **The Blob store must be created with `private` access.** A public store
+hands out URLs that work for anyone holding them, and this application stores
+Aadhaar scans. Vercel fixes a store's access mode at creation and it cannot be
+changed afterwards. Both file routes still check a session first, so the
+private store is defence in depth rather than the only control — but a public
+store would make that check bypassable by anyone who learned a URL.
 
 `images: { unoptimized: true }` is set in `next.config.mjs` because the pipeline
 already produced the variants; Next's optimiser would re-do the work.

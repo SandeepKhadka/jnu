@@ -13,7 +13,14 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  // Pooled connection, for queries. On a serverless host every function
+  // instance opens its own connections, and Postgres' direct connection
+  // limit is reached long before the traffic justifies it.
   url      = env("DATABASE_URL")
+  // Direct connection, for migrations only. `prisma migrate` takes advisory
+  // locks, which a transaction pooler does not carry through — against the
+  // pooled URL it can hang instead of failing.
+  directUrl = env("DIRECT_URL")
 }
 
 /// Staff accounts. Passwords are stored only as a bcrypt hash — never in

@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { randomBytes } from 'node:crypto'
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { deletePrefix, getObject, putObject } from '@/lib/object-store'
 import path from 'node:path'
 import sharp, { type Sharp } from 'sharp'
 
@@ -21,17 +21,13 @@ import {
  * at /media/<id>/<file> with year-long immutable caching — file names are
  * never reused, so a replaced logo is a new id and a new URL.
  *
- * Files go to MEDIA_DIR (default ./var/media), not public/: Next serves only
- * the public/ files that existed at build time, so anything written there at
- * runtime would 404 in production.
- *
- * PRODUCTION: the same caveat as uploads — Vercel's filesystem is ephemeral.
- * Point MEDIA_DIR at a persistent volume (Render, a VPS), or replace
- * writeVariant/readMediaFile with object storage.
+ * Bytes go through lib/object-store, never to public/: Next serves only the
+ * public/ files that existed at build time, so anything written there at
+ * runtime would 404 in production. On a serverless host the object store is
+ * a private Vercel Blob store, so these files are fetched by the route rather
+ * than linked directly — one hop slower than a CDN, and the reason the
+ * seeded imagery still lives in public/ where it is served statically.
  */
-
-/** `||` for the same reason as UPLOAD_ROOT in storage.ts: an empty value means "not configured". */
-export const MEDIA_ROOT = process.env.MEDIA_DIR || path.join(process.cwd(), 'var', 'media')
 
 const IMAGE_WIDTHS = [320, 640, 1024, 1600, 2400]
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024
@@ -83,14 +79,12 @@ export async function storeMedia(file: File, actorEmail: string, alt = ''): Prom
   }
 
   const id = randomBytes(12).toString('hex')
-  const dir = path.join(MEDIA_ROOT, id)
   const stem = safeStem(file.name)
-  await mkdir(dir, { recursive: true })
 
   try {
     if (type === 'application/pdf') {
       const name = `${stem}.pdf`
-      await writeFile(path.join(dir, name), buf)
+      await putObject('media', `${id}/${name}`, buf, type)
       const row = await db.media.create({
         data: {
           id,
@@ -135,7 +129,9 @@ export async function storeMedia(file: File, actorEmail: string, alt = ''): Prom
           ]
       for (const [format, pipeline] of outs) {
         const name = `${stem}-${w}.${format}`
-        await pipeline.toFile(path.join(dir, name))
+        // toBuffer rather than toFile: the bytes may be going to object
+        // storage, which has no filesystem to write to.
+        await putObject('media', `${id}/${name}`, await pipeline.toBuffer(), TYPES[format] ?? 'application/octet-stream')
         variants.push({ w, format, path: `/media/${id}/${name}` })
       }
     }
@@ -157,7 +153,9 @@ export async function storeMedia(file: File, actorEmail: string, alt = ''): Prom
     })
     return { ok: true, media: toMediaItem(row) }
   } catch (e) {
-    await rm(dir, { recursive: true, force: true })
+    // A half-encoded set of variants must not be left behind for an item that
+    // has no database row.
+    await deletePrefix('media', id)
     console.error(e)
     return { ok: false, error: 'That file could not be processed.' }
   }
@@ -199,7 +197,7 @@ export async function deleteMedia(id: string): Promise<void> {
   const row = await db.media.findUnique({ where: { id } })
   if (!row) return
   if (row.storage === 'local' && /^[a-f0-9]{24}$/.test(id)) {
-    await rm(path.join(MEDIA_ROOT, id), { recursive: true, force: true })
+    await deletePrefix('media', id)
   }
   await db.media.delete({ where: { id } })
 }
@@ -213,18 +211,13 @@ const TYPES: Record<string, string> = {
   pdf: 'application/pdf',
 }
 
-/** Reads /media/<id>/<name> from disk, refusing anything outside MEDIA_ROOT. */
+/** Reads /media/<id>/<name> back, refusing any id or name it did not generate. */
 export async function readMediaFile(
   id: string,
   name: string
 ): Promise<{ bytes: Buffer; contentType: string } | null> {
   if (!/^[a-f0-9]{24}$/.test(id) || !/^[a-z0-9-]+\.(avif|webp|jpg|png|gif|pdf)$/.test(name)) return null
-  const target = path.resolve(MEDIA_ROOT, id, name)
-  if (!target.startsWith(path.resolve(MEDIA_ROOT) + path.sep)) return null
-  try {
-    const bytes = await readFile(target)
-    return { bytes, contentType: TYPES[name.split('.').pop() ?? ''] ?? 'application/octet-stream' }
-  } catch {
-    return null
-  }
+  const bytes = await getObject('media', `${id}/${name}`)
+  if (!bytes) return null
+  return { bytes, contentType: TYPES[name.split('.').pop() ?? ''] ?? 'application/octet-stream' }
 }
