@@ -122,6 +122,27 @@ export function AdminShell({
           aria-label="Admin sections"
           className={`${open ? 'block' : 'hidden'} w-full shrink-0 lg:block lg:w-60`}
         >
+          {/*
+            The dashboard sits above the groups rather than inside one: it is
+            the panel's front page, not a section, and it was previously
+            reachable only by typing the URL or clicking the wordmark.
+
+            Its active state is an exact match — every other admin path begins
+            with "/admin", so the usual startsWith test would mark it current
+            on every screen.
+          */}
+          <Link
+            href="/admin"
+            onClick={() => setOpen(false)}
+            className={`mb-5 block rounded px-2 py-1.5 text-[13px] no-underline ${
+              pathname === '/admin' || pathname === '/admin/'
+                ? 'bg-jnu-600 font-semibold text-white'
+                : 'text-jnu-800 hover:bg-white'
+            }`}
+          >
+            Dashboard
+          </Link>
+
           {groups.map((g) => (
             <div key={g.title} className="mb-5">
               <h2 className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
