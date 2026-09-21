@@ -38,7 +38,7 @@ export function MainNav({ items }: { items: MenuItem[] }) {
             <li key={item.href} className="nav-item relative">
               <Link
                 href={item.href}
-                className="block px-3 py-2.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-white no-underline hover:bg-jnu-700 hover:text-white lg:py-3"
+                className="block px-4 py-3 text-[13.5px] font-semibold uppercase tracking-[0.06em] text-white no-underline hover:bg-jnu-700 hover:text-white lg:py-4"
               >
                 {item.label}
                 {item.children ? (

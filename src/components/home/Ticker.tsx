@@ -43,12 +43,12 @@ export function Ticker({ notices }: { notices: NoticeDTO[] }) {
 
   return (
     <section aria-label="Latest updates" className="border-b border-jnu-800 bg-jnu-500">
-      <div className="boxed flex items-center gap-3 py-2">
-        <h2 className="m-0 shrink-0 font-display text-[12px] uppercase tracking-[0.1em] text-white">
+      <div className="boxed flex items-center gap-4 py-3.5">
+        <h2 className="m-0 shrink-0 font-display text-[15px] uppercase tracking-[0.1em] text-white">
           Latest Updates
         </h2>
         <div className="ticker-viewport relative flex-1 overflow-hidden">
-          <div className="ticker-track text-[13px]">
+          <div className="ticker-track text-[15px]">
             {row('a', false)}
             {/* Duplicate track makes the -50% translate loop seamlessly. */}
             {row('b', true)}
@@ -56,7 +56,7 @@ export function Ticker({ notices }: { notices: NoticeDTO[] }) {
         </div>
         <Link
           href="/notices/"
-          className="hidden shrink-0 text-[12px] font-semibold uppercase tracking-wide text-white underline decoration-white/40 hover:decoration-white sm:block"
+          className="hidden shrink-0 text-[13.5px] font-semibold uppercase tracking-wide text-white underline decoration-white/40 hover:decoration-white sm:block"
         >
           View all
         </Link>

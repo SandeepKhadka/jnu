@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { getBranding, getResolvedMenu, getSite } from '@/lib/content'
+import { CounsellingButton } from '@/components/site/CounsellingButton'
 import { LoginMenu } from './LoginMenu'
 import { MainNav } from './MainNav'
 
@@ -49,7 +50,7 @@ export async function Header() {
 
       {/* ---- masthead ---- */}
       <div className="border-b border-hair bg-white">
-        <div className="boxed flex flex-wrap items-center justify-between gap-4 py-4">
+        <div className="boxed flex flex-wrap items-center justify-between gap-4 py-6">
           <Link href="/" className="block shrink-0 no-underline" aria-label={`${site.name} — home`}>
             {/*
               The university's own lockup: crest with the name in Hindi and
@@ -62,16 +63,17 @@ export async function Header() {
             <img
               src={branding.logo.src}
               srcSet={branding.logo.srcSet}
-              sizes="(min-width: 640px) 230px, 200px"
+              sizes="(min-width: 640px) 340px, 260px"
               alt={site.name}
               width={branding.logo.width}
               height={branding.logo.height}
-              className="h-12 w-auto sm:h-14"
+              className="h-16 w-auto sm:h-20 lg:h-24"
             />
           </Link>
 
           <div className="flex items-center gap-2">
-            <Link href="/admission/process/" className="btn btn-sand">
+            <CounsellingButton />
+            <Link href="/admission/process/" className="btn btn-primary">
               Admission
             </Link>
             <Link href="/admission/download-forms/" className="btn btn-secondary">
