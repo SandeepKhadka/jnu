@@ -28,7 +28,17 @@ import { db } from '@/lib/db'
  * go through the exported functions and never touch the disk directly.
  */
 
-const UPLOAD_ROOT = process.env.UPLOAD_DIR ?? path.join(process.cwd(), 'var', 'uploads')
+/**
+ * `||`, not `??`.
+ *
+ * `UPLOAD_DIR=` with nothing after it is the normal result of copying
+ * .env.local.example, and it is a *set* variable as far as `??` is concerned.
+ * That made UPLOAD_ROOT the empty string, which path.join resolves relative
+ * to the working directory — so Aadhaar scans were written into the project
+ * root, where .gitignore (which covers /var/ only) would not have stopped
+ * them being committed. An empty value means "not configured".
+ */
+const UPLOAD_ROOT = process.env.UPLOAD_DIR || path.join(process.cwd(), 'var', 'uploads')
 
 /** What each kind of upload is allowed to be, and how big. */
 export const UPLOAD_RULES = {

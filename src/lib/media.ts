@@ -30,7 +30,8 @@ import {
  * writeVariant/readMediaFile with object storage.
  */
 
-export const MEDIA_ROOT = process.env.MEDIA_DIR ?? path.join(process.cwd(), 'var', 'media')
+/** `||` for the same reason as UPLOAD_ROOT in storage.ts: an empty value means "not configured". */
+export const MEDIA_ROOT = process.env.MEDIA_DIR || path.join(process.cwd(), 'var', 'media')
 
 const IMAGE_WIDTHS = [320, 640, 1024, 1600, 2400]
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024
