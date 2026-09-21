@@ -272,7 +272,7 @@ gets you an empty page.
 
 ### Live demo, in order
 
-Reset first: `npm run db:reset`
+Load the demo records first: `npm run db:seed:demo` (delete them afterwards).
 
 1. `/results/` → `JNU2024BT0147` → full marksheet
 2. `/results/` → `JNU2024BT0171` → **Invalid roll number** (it exists, unpublished)
@@ -298,8 +298,8 @@ npm run build       # production build (generates client, applies migrations)
 npm start           # run the production build locally
 
 npm run db:migrate  # create and apply a migration after a schema change
-npm run db:seed     # load demo data
-npm run db:reset    # drop, migrate, re-seed — run before demonstrating
+npm run db:seed     # site content only; fills empty tables (idempotent)
+npm run db:seed:demo # demo students/results (refuses in production)
 npm run db:studio   # visual database browser
 ```
 

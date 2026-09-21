@@ -27,7 +27,8 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 
 ### Staff logins
 
-Sign in at **`/admin/login/`** (also linked as "Staff Login" in the footer):
+Sign in at **`/admin/login/`** (also linked as "Staff Login" in the footer).
+Accounts are created as described below; nothing is pre-seeded.
 
 ### Creating the first administrator
 
@@ -344,8 +345,8 @@ npm start           # run the production build
 npm run typecheck   # tsc --noEmit
 
 npm run db:migrate  # create and apply a migration after a schema change
-npm run db:seed     # load demo data (idempotent)
-npm run db:reset    # drop, migrate, re-seed — run before demonstrating
+npm run db:seed     # site content only; fills empty tables (idempotent)
+npm run db:seed:demo # demo students/results (refuses in production; delete afterwards)
 npm run db:studio   # visual database browser
 ```
 
