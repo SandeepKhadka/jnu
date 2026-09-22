@@ -15,7 +15,7 @@ export async function Header() {
     <header>
       {/* ---- utility bar ---- */}
       <div className="chrome-topbar text-white">
-        <div className="boxed flex flex-wrap items-center justify-between gap-2 py-1.5 text-xs">
+        <div className="boxed flex flex-wrap items-center justify-between gap-2 py-1.5 pr-24 text-xs lg:pr-4">
           <p className="m-0">
             <a href={`mailto:${site.email}`} className="text-white hover:text-jnu-100">
               {site.email}
@@ -31,7 +31,7 @@ export async function Header() {
               </>
             ) : null}
           </p>
-          <nav aria-label="Utility" className="flex items-center gap-4">
+          <nav aria-label="Utility" className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <Link href="/notices/" className="text-white hover:text-jnu-100">
               Notices
             </Link>

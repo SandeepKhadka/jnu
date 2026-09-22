@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Open_Sans, Allerta } from 'next/font/google'
 import './globals.css'
 
@@ -17,6 +17,20 @@ import { SITE_URL } from '@/lib/site-url'
  */
 const openSans = Open_Sans({ subsets: ['latin'], display: 'swap', variable: '--font-open-sans' })
 const allerta = Allerta({ subsets: ['latin'], weight: '400', display: 'swap', variable: '--font-allerta' })
+
+/**
+ * Declared light-only, and matched by color-scheme in globals.css.
+ *
+ * Chrome on Android applies its own dark inversion to any page that does
+ * not state a preference. It rewrote the palette of a site whose colours
+ * are the client brand: hairlines disappeared against the inverted shell,
+ * and the logo lockup - dark artwork on transparency - went black on black.
+ * This site has one intended appearance, so it says so.
+ */
+export const viewport: Viewport = {
+  colorScheme: 'light',
+  themeColor: '#123f63',
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const [site, branding] = await Promise.all([getSite(), getBranding()])

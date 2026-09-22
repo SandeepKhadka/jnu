@@ -17,7 +17,23 @@
 
 @layer base {
   html {
+    color-scheme: only light;
     -webkit-text-size-adjust: 100%;
+  }
+
+  /*
+   * Nothing may scroll the page sideways. A single over-wide element — a long
+   * unbroken address, a wide table, a nav row that will not wrap — drags the
+   * whole layout and reads as a broken site on a phone. The named causes are
+   * fixed at source; this is the backstop. clip rather than hidden, because
+   * hidden creates a scroll container and would break position:sticky
+   * for descendants.
+   */
+  html, body {
+    /* hidden first, for Safari below 16, which does not know clip. */
+    overflow-x: hidden;
+    overflow-x: clip;
+    max-width: 100%;
   }
 
   body {
@@ -130,12 +146,32 @@
   }
 
   /* ---- dropdown nav --------------------------------------------------- */
+  /*
+   * Two different mechanisms, deliberately not shared.
+   *
+   * On a phone the panel is opened by JS: tapping a section toggles it, and
+   * the section's own page is offered as the first entry inside. Hover does
+   * not exist on touch, and :focus-within opened the panel on the same tap
+   * that followed the link — the menu appeared to flash open while the page
+   * navigated underneath it.
+   *
+   * From lg up, hover and focus-within open it as before and the mobile
+   * state is ignored.
+   */
   .nav-item > .nav-panel {
     display: none;
   }
-  .nav-item:hover > .nav-panel,
-  .nav-item:focus-within > .nav-panel {
+  .nav-item > .nav-panel.is-open {
     display: block;
+  }
+  @media (min-width: 1024px) {
+    .nav-item > .nav-panel.is-open {
+      display: none;
+    }
+    .nav-item:hover > .nav-panel,
+    .nav-item:focus-within > .nav-panel {
+      display: block;
+    }
   }
 
   /* ---- prose for inner content pages ---------------------------------- */

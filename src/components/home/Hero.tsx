@@ -115,7 +115,7 @@ export function Hero({ slides, home }: { slides: SlideDTO[]; home: HomeContent }
         if (!regionRef.current?.contains(e.relatedTarget as Node)) setFocused(false)
       }}
     >
-      <div className="relative h-[300px] overflow-hidden sm:h-[420px] md:h-[560px] lg:h-[660px]">
+      <div className="relative h-[210px] overflow-hidden sm:h-[340px] md:h-[560px] lg:h-[660px]">
         <div aria-live={rotating ? 'off' : 'polite'} className="h-full">
           {slides.map((s, i) => {
             const src = sources(s)
