@@ -3,6 +3,7 @@ import { getBranding, getResolvedMenu, getSite } from '@/lib/content'
 import { CounsellingButton } from '@/components/site/CounsellingButton'
 import { LoginMenu } from './LoginMenu'
 import { MainNav } from './MainNav'
+import { MobileBar } from './MobileBar'
 
 /**
  * Top utility bar + masthead + nav — the standard institutional header
@@ -54,7 +55,9 @@ export async function Header() {
 
   return (
     <header>
-      {/* ---- utility bar: desktop only. The phone gets MainNav's strip. ---- */}
+      <MobileBar items={menu} utility={utility} />
+
+      {/* ---- utility bar: desktop only. The phone gets MobileBar's strip. ---- */}
       <div className="chrome-topbar hidden text-white lg:block">
         <div className="boxed flex flex-wrap items-center justify-between gap-2 py-1.5 text-xs">
           {utility}
@@ -97,7 +100,7 @@ export async function Header() {
         </div>
       </div>
 
-      <MainNav items={menu} utility={utility} />
+      <MainNav items={menu} />
     </header>
   )
 }
