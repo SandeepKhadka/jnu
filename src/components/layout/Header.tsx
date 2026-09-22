@@ -87,12 +87,12 @@ export async function Header() {
             />
           </Link>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <CounsellingButton />
             <Link href="/admission/process/" className="btn btn-primary">
               Admission
             </Link>
-            <Link href="/admission/download-forms/" className="btn btn-secondary">
+            <Link href="/admission/download-forms/" className="btn btn-secondary hidden sm:inline-block">
               Downloads
             </Link>
             <LoginMenu />
