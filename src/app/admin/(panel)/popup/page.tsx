@@ -6,12 +6,12 @@ import {
   Card,
   Check,
   Field,
-  IconButton,
   Input,
   Loading,
   PageHeader,
   Row,
   StatusLine,
+  StringList,
   Textarea,
 } from '@/components/admin/ui'
 
@@ -29,20 +29,11 @@ export default function PopupNoticePage() {
   const { value, set, setValue, loading, busy, status, save } = useSetting('popupNotice')
   if (loading) return <Loading />
 
-  const links = value.links
-
-  function setLink(i: number, field: 'label' | 'href', v: string) {
-    setValue((prev) => ({
-      ...prev,
-      links: prev.links.map((l, j) => (j === i ? { ...l, [field]: v } : l)),
-    }))
-  }
-
   return (
     <div>
       <PageHeader
         title="Pop-up notice"
-        description="A dialog shown over the public site about two seconds after a visitor arrives."
+        description="A dialog shown over the public site shortly after a visitor arrives."
         actions={
           <Button onClick={save} disabled={busy}>
             {busy ? 'Saving…' : 'Save'}
@@ -59,7 +50,7 @@ export default function PopupNoticePage() {
             checked={value.enabled}
             onChange={(e) => set('enabled', e.target.checked)}
           />
-          <Field label="Title" required hint="Shown in the blue bar at the top of the dialog.">
+          <Field label="Title" required hint="Shown as the notice heading.">
             <Input
               value={value.title}
               onChange={(e) => set('title', e.target.value)}
@@ -78,58 +69,24 @@ export default function PopupNoticePage() {
       </Card>
 
       <Card
-        title="Links"
-        description="Up to six. Internal paths start with a slash; external links must start with https://."
-        actions={
-          links.length < 6 ? (
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => setValue((prev) => ({ ...prev, links: [...prev.links, { label: '', href: '' }] }))}
-            >
-              Add link
-            </Button>
-          ) : null
-        }
+        title="Key points"
+        description="Up to six short lines, shown in red beneath the message. They are text, not links: nothing in the notice is clickable, so nobody is carried out of it by a mistaken tap."
       >
-        {links.length === 0 ? (
-          <p className="m-0 text-[13px] text-muted">No links. The notice will show its message only.</p>
-        ) : (
-          <div className="space-y-3">
-            {links.map((l, i) => (
-              <div key={i} className="flex flex-wrap items-end gap-2">
-                <div className="min-w-[180px] flex-1">
-                  <Field label="Text">
-                    <Input value={l.label} onChange={(e) => setLink(i, 'label', e.target.value)} placeholder="Apply now" />
-                  </Field>
-                </div>
-                <div className="min-w-[220px] flex-1">
-                  <Field label="Link">
-                    <Input
-                      value={l.href}
-                      onChange={(e) => setLink(i, 'href', e.target.value)}
-                      placeholder="/admission/process/"
-                    />
-                  </Field>
-                </div>
-                <IconButton
-                  label="Remove link"
-                  onClick={() => setValue((prev) => ({ ...prev, links: prev.links.filter((_, j) => j !== i) }))}
-                >
-                  ×
-                </IconButton>
-              </div>
-            ))}
-          </div>
-        )}
+        <StringList
+          values={value.points}
+          onChange={(points) => set('points', points)}
+          addLabel="Add a point"
+          placeholder="Last date for applications is 30 June"
+        />
         <p className="m-0 mt-3 text-[12px] text-muted">
-          A link with an empty text or an unsafe address is dropped when you save.
+          Empty lines are dropped when you save. If people need to go somewhere, say where in the message and
+          let them find it from the menu — a notice that navigates away is a notice nobody finishes reading.
         </p>
       </Card>
 
       <Card title="How often it appears">
         <p className="m-0 text-[13px] text-muted">
-          The notice appears about two seconds after a page is opened, every time — closing it hides it for
+          The notice appears a moment after a page is opened, every time — closing it hides it for
           that page only, and it returns on the next visit or refresh. It does not reappear while someone
           moves between pages on the site.
         </p>

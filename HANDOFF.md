@@ -38,7 +38,7 @@ protect that, and they are documented in section 4. Do not undo them.
 | Framework | Next.js 15 (App Router), React 19, TypeScript 5.6 (strict) |
 | Styling | Tailwind CSS 3 — no component library |
 | ORM | Prisma 6 |
-| Database | SQLite in development (`prisma/dev.db`); **must become Postgres in production** |
+| Database | **Postgres** everywhere (Neon in production and in development). Was SQLite; migrations were regenerated for the new dialect |
 | Auth | JWT in httpOnly cookies via `jose`; password hashing via `bcryptjs` |
 | Images | `sharp` — AVIF/WebP/JPEG at multiple widths, generated at upload |
 | QR codes | `qrcode` — on marksheets and degree certificates |
@@ -59,7 +59,7 @@ justifying, not a reflex.
 ```bash
 npm install
 cp .env.local.example .env.local     # then edit — see section 3.2
-npx prisma migrate deploy            # creates prisma/dev.db
+npx prisma migrate deploy            # applies to the Postgres in DATABASE_URL
 npm run db:seed                      # site content only, no fake people
 npm run admin:create -- --email you@example.com --name "Your Name"
 npm run dev                          # http://localhost:3000
@@ -97,17 +97,20 @@ These are the variables the code actually reads:
 
 | Variable | Purpose |
 |---|---|
-| `DATABASE_URL` | Prisma connection string. `file:./dev.db` locally |
+| `DATABASE_URL` | Postgres connection string. Use the **pooled** one (`-pooler`) — queries only |
+| `DIRECT_URL` | The **unpooled** Postgres URL. `prisma migrate` only; a pooler does not carry its advisory locks |
 | `AUTH_SECRET` | Signs session JWTs. **≥32 chars, different in production** |
 | `NEXT_PUBLIC_SITE_URL` | Absolute origin. Wrong value ⇒ wrong canonicals ⇒ SEO damage |
-| `UPLOAD_DIR` | Where applicant documents are written. Default `./var/uploads` |
-| `MEDIA_DIR` | Where admin-uploaded media is written. Default `./var/media` |
+| `UPLOAD_DIR` | Where applicant documents go when not using Blob. Default `./var/uploads` |
+| `MEDIA_DIR` | Where admin media goes when not using Blob. Default `./var/media` |
+| `BLOB_READ_WRITE_TOKEN` / `BLOB_STORE_ID` | Either one switches `object-store.ts` from disk to a **private** Vercel Blob store. Set by Vercel when the store is connected |
 | `NEXT_PUBLIC_SHOW_MAINTAINER_NOTES` | Shows TODO notes on rendered pages while drafting content |
 | `ADMIN_PASSWORD` | Only read by `scripts/create-admin.ts`, for non-interactive setup |
 
-`UPLOAD_DIR` and `MEDIA_DIR` must be **unset**, not empty, to get their
-defaults — the code uses `??`, so an empty string is taken literally.
-`.env.local.example` documents exactly the variables above.
+`UPLOAD_DIR` and `MEDIA_DIR` fall back with `||`, so an empty value is
+treated as "not configured". With `??` an empty `UPLOAD_DIR=` resolved to
+`""` and wrote identity documents into the project root, which `.gitignore`
+does not cover. `.env.local.example` documents exactly the variables above.
 
 ---
 
@@ -316,11 +319,16 @@ audit entries.
   The form posts multipart to `/api/counselling/`; submissions land in
   Admin → Online counselling.
 - **Pop-up notice** (`src/components/site/NoticePopup.tsx`) — an announcement
-  shown ~2 s after arrival, dismissed for the rest of the browsing session.
-  Edited at Admin → Pop-up notice. It is **not** server-rendered: it is an
-  overlay, and putting it in the prerendered HTML would cost layout stability
-  on the page Google measures. Dismissal is keyed by a `revision` number, so
-  bumping it re-shows the notice to people who closed the previous one.
+  styled as an official notice: sand banner, ruled heading, and "key points"
+  shown as red text. The points are deliberately **not links** — nothing in
+  the dialog navigates, so nobody is carried out of a notice they have not
+  finished reading. Edited at Admin → Pop-up notice.
+  **Dismissal is not remembered**: it reappears on every page load and
+  refresh, by the client's choice, so the enabled switch is the only thing
+  that stops it. It does not re-show on client-side navigation, because the
+  component lives in the layout and stays mounted.
+  It is **not** server-rendered: it is an overlay, and prerendering it would
+  cost layout stability on the page Google measures.
 - **Affiliations & syllabus** (`/affiliations/`, `/admission/syllabus/`) — two
   tables of PDFs, edited on one screen at Admin → Affiliations & syllabus.
   Documents come from the media library, so one file can serve both lists. A
@@ -503,6 +511,14 @@ could not verify a claim, say so rather than implying you checked.
 ---
 
 ## 16. Deployment
+
+**Live preview:** <https://jnu-one.vercel.app> — Vercel, deployed from
+`master` of `github.com/sandeepkhadka49356-ctrl/jnu`. Postgres is Neon;
+uploads go to a **private** Vercel Blob store (section 10). Two database URLs
+are set: `DATABASE_URL` pooled for queries, `DIRECT_URL` unpooled for
+migrations. A free Neon compute suspends when idle, so the first request after
+a quiet period waits a few seconds for it to wake.
+
 
 `DEPLOY.md` has the step-by-step. Summary:
 

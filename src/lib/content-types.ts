@@ -469,14 +469,28 @@ export type PopupNotice = {
   enabled: boolean
   title: string
   body: string
-  links: FooterLink[]
+  /** Shown as plain red text, deliberately not as links. */
+  points: string[]
 }
 
 export const DEFAULT_POPUP_NOTICE: PopupNotice = {
   enabled: false,
   title: '',
   body: '',
-  links: [],
+  points: [],
+}
+
+/**
+ * Accepts either a list of strings or the {label, href} shape the notice used
+ * when its entries were links, so a stored notice keeps its wording when the
+ * two are swapped over.
+ */
+function normalisePoints(v: unknown): string[] {
+  if (!Array.isArray(v)) return []
+  return v
+    .map((raw) => (typeof raw === 'string' ? str(raw, 200) : str(obj(raw).label, 200)))
+    .filter(Boolean)
+    .slice(0, 6)
 }
 
 export function normalisePopupNotice(v: unknown): PopupNotice {
@@ -485,9 +499,7 @@ export function normalisePopupNotice(v: unknown): PopupNotice {
     enabled: o.enabled === true,
     title: str(o.title, 160),
     body: str(o.body, 2000),
-    links: menuItems(o.links, 1)
-      .slice(0, 6)
-      .map(({ label, href }) => ({ label, href })),
+    points: normalisePoints(o.points ?? o.links),
   }
 }
 
