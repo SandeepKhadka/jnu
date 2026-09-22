@@ -23,11 +23,24 @@ import type { MenuItem } from '@/lib/content-types'
  * From lg up: hover-opened dropdowns, era-correct, keyboard reachable via
  * :focus-within (globals.css), and not fixed at all.
  */
-export function MainNav({ items }: { items: MenuItem[] }) {
+export function MainNav({ items, utility }: { items: MenuItem[]; utility?: React.ReactNode }) {
   const [open, setOpen] = useState(false)
   const [section, setSection] = useState<string | null>(null)
   const [hidden, setHidden] = useState(false)
   const lastY = useRef(0)
+  const barRef = useRef<HTMLDivElement>(null)
+  const [barH, setBarH] = useState(0)
+
+  // The strip is out of the flow, so something has to hold its place, and
+  // its height is not fixed — the contact details wrap on a narrow screen.
+  useEffect(() => {
+    const el = barRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setBarH(el.offsetHeight))
+    ro.observe(el)
+    setBarH(el.offsetHeight)
+    return () => ro.disconnect()
+  }, [])
 
   // Scroll DIRECTION, not position. The threshold keeps the bar still under
   // the jitter of a finger resting on a moving page; the 80px floor stops it
@@ -150,13 +163,19 @@ export function MainNav({ items }: { items: MenuItem[] }) {
 
   return (
     <>
-      {/* ---- phone: the bar. The only element carrying a transform. ---- */}
+      {/*
+        Phone: the info strip IS the bar, with the menu button at its right.
+        One element at the top of the page rather than a menu bar laid over
+        the contact details. It is the only element carrying a transform.
+      */}
       <div
-        className={`chrome-nav fixed inset-x-0 top-0 z-50 flex h-[52px] items-center transition-transform duration-200 motion-reduce:transition-none lg:hidden ${
+        ref={barRef}
+        className={`chrome-topbar fixed inset-x-0 top-0 z-50 text-white transition-transform duration-200 motion-reduce:transition-none lg:hidden ${
           hidden ? '-translate-y-full' : 'translate-y-0'
         }`}
       >
-        <div className="boxed flex justify-end">
+        <div className="boxed flex items-start justify-between gap-3 py-1.5 text-xs">
+          <div className="flex min-w-0 flex-1 flex-col gap-y-0.5">{utility}</div>
           <button
             type="button"
             onClick={() => {
@@ -168,14 +187,14 @@ export function MainNav({ items }: { items: MenuItem[] }) {
             }}
             aria-expanded={open}
             aria-controls="main-nav-list"
-            className="flex items-center gap-2 rounded border border-white/30 px-3 py-1.5 text-[13px] font-semibold uppercase tracking-wide text-white"
+            className="flex shrink-0 items-center gap-1.5 rounded border border-white/30 px-2.5 py-1 text-[12px] font-semibold uppercase tracking-wide text-white"
           >
             <span aria-hidden="true">{open ? '×' : '☰'}</span> Menu
           </button>
         </div>
       </div>
-      {/* Holds the bar's place in the flow, since it is out of it. */}
-      <div aria-hidden="true" className="h-[52px] lg:hidden" />
+      {/* Holds the strip's place in the flow, since it is out of it. */}
+      <div aria-hidden="true" className="lg:hidden" style={{ height: barH }} />
 
       {/* ---- phone: scrim and drawer, outside anything transformed ---- */}
       {open ? (

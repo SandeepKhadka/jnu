@@ -7,44 +7,57 @@ import { MainNav } from './MainNav'
 /**
  * Top utility bar + masthead + nav — the standard institutional header
  * arrangement of the period.
+ *
+ * On a phone the utility bar IS the strip that follows scroll direction, with
+ * the menu button at its right, so one element sits at the top instead of a
+ * menu bar laid over the contact details. Its contents are built here, on the
+ * server, and handed to MainNav to place: a server component may pass
+ * rendered JSX to a client one, so the markup stays in one file while the
+ * behaviour stays where the state lives.
  */
 export async function Header() {
   const [site, branding, menu] = await Promise.all([getSite(), getBranding(), getResolvedMenu()])
 
+  const utility = (
+    <>
+      <p className="m-0 min-w-0 truncate">
+        <a href={`mailto:${site.email}`} className="text-white hover:text-jnu-100">
+          {site.email}
+        </a>
+        {site.phone ? (
+          <>
+            <span className="mx-2 text-jnu-300" aria-hidden="true">
+              |
+            </span>
+            <a href={`tel:${site.phone}`} className="text-white hover:text-jnu-100">
+              {site.phone}
+            </a>
+          </>
+        ) : null}
+      </p>
+      <nav aria-label="Utility" className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <Link href="/notices/" className="text-white hover:text-jnu-100">
+          Notices
+        </Link>
+        <Link href="/results/" className="text-white hover:text-jnu-100">
+          Results
+        </Link>
+        <Link href="/verify/" className="text-white hover:text-jnu-100">
+          Verify Certificate
+        </Link>
+        <Link href="/contact/" className="text-white hover:text-jnu-100">
+          Contact
+        </Link>
+      </nav>
+    </>
+  )
+
   return (
     <header>
-      {/* ---- utility bar ---- */}
-      <div className="chrome-topbar text-white">
+      {/* ---- utility bar: desktop only. The phone gets MainNav's strip. ---- */}
+      <div className="chrome-topbar hidden text-white lg:block">
         <div className="boxed flex flex-wrap items-center justify-between gap-2 py-1.5 text-xs">
-          <p className="m-0">
-            <a href={`mailto:${site.email}`} className="text-white hover:text-jnu-100">
-              {site.email}
-            </a>
-            {site.phone ? (
-              <>
-                <span className="mx-2 text-jnu-300" aria-hidden="true">
-                  |
-                </span>
-                <a href={`tel:${site.phone}`} className="text-white hover:text-jnu-100">
-                  {site.phone}
-                </a>
-              </>
-            ) : null}
-          </p>
-          <nav aria-label="Utility" className="flex flex-wrap items-center gap-x-4 gap-y-1">
-            <Link href="/notices/" className="text-white hover:text-jnu-100">
-              Notices
-            </Link>
-            <Link href="/results/" className="text-white hover:text-jnu-100">
-              Results
-            </Link>
-            <Link href="/verify/" className="text-white hover:text-jnu-100">
-              Verify Certificate
-            </Link>
-            <Link href="/contact/" className="text-white hover:text-jnu-100">
-              Contact
-            </Link>
-          </nav>
+          {utility}
         </div>
       </div>
 
@@ -84,7 +97,7 @@ export async function Header() {
         </div>
       </div>
 
-      <MainNav items={menu} />
+      <MainNav items={menu} utility={utility} />
     </header>
   )
 }
