@@ -18,11 +18,12 @@ import {
 /**
  * The announcement shown over the public site on arrival.
  *
- * "Show this again" bumps a revision number. Dismissal is remembered per
- * visitor for the length of their browsing session and is keyed by that
- * number, so a genuinely new announcement reaches someone who closed the
- * last one — without that, editing the text would quietly reach nobody who
- * had already dismissed it.
+ * Nothing is remembered about who has seen it: it appears on every page load
+ * and closing it lasts only for that page. That is the client's call, and it
+ * removes the problem the alternative had — an edited notice reaching nobody
+ * who had already dismissed the previous one. The cost is that regular
+ * visitors see it every visit, so the enabled switch is the control that
+ * matters.
  */
 export default function PopupNoticePage() {
   const { value, set, setValue, loading, busy, status, save } = useSetting('popupNotice')
@@ -126,25 +127,17 @@ export default function PopupNoticePage() {
         </p>
       </Card>
 
-      <Card
-        title="Showing it again"
-        description="A visitor who closes the notice does not see it again for the rest of their visit."
-      >
+      <Card title="How often it appears">
         <p className="m-0 text-[13px] text-muted">
-          This notice is on revision <strong className="tnum text-jnu-800">{value.revision}</strong>. If you have
-          changed the message and want people who already dismissed it to see the new one, show it again.
+          The notice appears about two seconds after a page is opened, every time — closing it hides it for
+          that page only, and it returns on the next visit or refresh. It does not reappear while someone
+          moves between pages on the site.
         </p>
-        <Button
-          variant="secondary"
-          size="sm"
-          className="mt-3"
-          onClick={async () => {
-            setValue((prev) => ({ ...prev, revision: prev.revision + 1 }))
-            // Saved on the next click of Save, like every other field here.
-          }}
-        >
-          Show again to everyone
-        </Button>
+        <p className="m-0 mt-2 text-[13px] text-muted">
+          Nothing is remembered about who has seen it, so a notice is never missed by someone who closed it
+          before reading it. The other side of that is that regular visitors see it on every visit — switch it
+          off above once it has served its purpose.
+        </p>
       </Card>
     </div>
   )

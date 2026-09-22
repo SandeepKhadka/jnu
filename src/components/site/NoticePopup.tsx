@@ -14,31 +14,23 @@ import type { PopupNotice } from '@/lib/content-types'
  * a short delay keeps the static HTML — the thing Google indexes — exactly
  * as it was.
  *
- * Dismissal is remembered per browsing session, keyed by the notice's
- * revision, so publishing a new announcement shows it again to someone who
- * dismissed the previous one.
+ * Dismissal is NOT remembered. Closing it hides it for that page view, and it
+ * comes back on the next load or refresh — the client's decision, so a notice
+ * is not missed by anyone who dismissed it before reading it. It is not
+ * re-shown on navigation between pages: this component lives in the layout
+ * and stays mounted, so the timer runs once per full page load rather than
+ * once per link followed.
  */
 export function NoticePopup({ notice }: { notice: PopupNotice }) {
   const [open, setOpen] = useState(false)
   const titleId = useId()
   const dialogRef = useRef<HTMLDivElement>(null)
-  const key = `jnu.notice.dismissed.${notice.revision}`
 
   useEffect(() => {
     if (!notice.enabled || !notice.title) return
-
-    let dismissed = false
-    try {
-      dismissed = window.sessionStorage.getItem(key) === '1'
-    } catch {
-      // Private browsing or blocked storage: show it. Worst case the visitor
-      // dismisses it once more.
-    }
-    if (dismissed) return
-
     const t = window.setTimeout(() => setOpen(true), 2000)
     return () => window.clearTimeout(t)
-  }, [notice.enabled, notice.title, key])
+  }, [notice.enabled, notice.title])
 
   useEffect(() => {
     if (!open) return
@@ -51,11 +43,6 @@ export function NoticePopup({ notice }: { notice: PopupNotice }) {
 
   function close() {
     setOpen(false)
-    try {
-      window.sessionStorage.setItem(key, '1')
-    } catch {
-      // Nothing to do: it will simply appear again next time.
-    }
   }
 
   if (!open) return null

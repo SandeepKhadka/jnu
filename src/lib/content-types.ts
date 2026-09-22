@@ -470,8 +470,6 @@ export type PopupNotice = {
   title: string
   body: string
   links: FooterLink[]
-  /** Bumped by the editor to show a dismissed notice again. */
-  revision: number
 }
 
 export const DEFAULT_POPUP_NOTICE: PopupNotice = {
@@ -479,12 +477,10 @@ export const DEFAULT_POPUP_NOTICE: PopupNotice = {
   title: '',
   body: '',
   links: [],
-  revision: 1,
 }
 
 export function normalisePopupNotice(v: unknown): PopupNotice {
   const o = obj(v)
-  const revision = Number(o.revision)
   return {
     enabled: o.enabled === true,
     title: str(o.title, 160),
@@ -492,7 +488,6 @@ export function normalisePopupNotice(v: unknown): PopupNotice {
     links: menuItems(o.links, 1)
       .slice(0, 6)
       .map(({ label, href }) => ({ label, href })),
-    revision: Number.isFinite(revision) && revision > 0 ? Math.floor(revision) : 1,
   }
 }
 
