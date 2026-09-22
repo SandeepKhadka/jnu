@@ -25,7 +25,7 @@ export function CounsellingButton() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="btn btn-sand attention-pulse"
+        className="btn btn-sand attention-pulse max-sm:px-2.5 max-sm:text-[11px]"
       >
         Online Counselling
       </button>

@@ -87,9 +87,9 @@ export async function Header() {
             />
           </Link>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
             <CounsellingButton />
-            <Link href="/admission/process/" className="btn btn-primary">
+            <Link href="/admission/process/" className="btn btn-primary max-sm:px-2.5 max-sm:text-[11px]">
               Admission
             </Link>
             <Link href="/admission/download-forms/" className="btn btn-secondary hidden sm:inline-block">
