@@ -30,14 +30,25 @@
    * for descendants.
    */
   html, body {
-    /* hidden first, for Safari below 16, which does not know clip. */
-    overflow-x: hidden;
+    /* clip, not hidden: hidden would create a scroll container and
+       stop the nav bar sticking. */
     overflow-x: clip;
     max-width: 100%;
   }
 
   body {
     @apply bg-shell text-ink font-sans;
+    /*
+     * The same grey again, as a gradient.
+     *
+     * Chrome on Android can be told to force dark on every site, and that
+     * setting overrides color-scheme. It re-computes background COLOURS and
+     * left the page shell almost black while the white cards on top of it
+     * stayed white — the reported fault. It does not touch background
+     * IMAGES, and a two-stop gradient of one colour is an image. Identical
+     * rendering everywhere else, so there is no cost to carrying it.
+     */
+    background-image: linear-gradient(#f4f4f4, #f4f4f4);
     font-size: 14px;
     line-height: 1.65;
   }

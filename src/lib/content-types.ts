@@ -402,7 +402,7 @@ export const DEFAULT_MENU: MenuItem[] = [
     children: [
       { label: 'Notices & Circulars', href: '/notices/' },
       { label: 'Student Login', href: '/student/login/' },
-      { label: 'Examination Results', href: '/results/' },
+      { label: 'Results', href: '/results/' },
       { label: 'Certificate Verification', href: '/verify/' },
       { label: 'Time Table', href: '/student-zone/time-table/' },
       { label: 'Enrollment Status', href: '/student-zone/enrollment-status/' },

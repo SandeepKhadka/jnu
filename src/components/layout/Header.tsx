@@ -15,7 +15,7 @@ export async function Header() {
     <header>
       {/* ---- utility bar ---- */}
       <div className="chrome-topbar text-white">
-        <div className="boxed flex flex-wrap items-center justify-between gap-2 py-1.5 pr-24 text-xs lg:pr-4">
+        <div className="boxed flex flex-wrap items-center justify-between gap-2 py-1.5 text-xs">
           <p className="m-0">
             <a href={`mailto:${site.email}`} className="text-white hover:text-jnu-100">
               {site.email}
