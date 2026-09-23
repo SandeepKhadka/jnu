@@ -27,6 +27,7 @@ export default function GalleryPage() {
   const [categories, setCategories] = useState<GalleryCategoryDTO[] | null>(null)
   const [addingTo, setAddingTo] = useState<string | null>(null)
   const [newSection, setNewSection] = useState(false)
+  const [editingSection, setEditingSection] = useState<GalleryCategoryDTO | null>(null)
   const [editing, setEditing] = useState<GalleryPhotoDTO | null>(null)
   const { status, show, saved } = useStatus()
 
@@ -86,6 +87,9 @@ export default function GalleryPage() {
               </IconButton>
               <Button size="sm" onClick={() => setAddingTo(c.id)}>
                 Add photos
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => setEditingSection(c)}>
+                Rename
               </Button>
               <ConfirmButton question={`Delete the section "${c.title}"?`} onConfirm={() => removeIt('category', c.id)}>
                 Delete
@@ -154,11 +158,17 @@ export default function GalleryPage() {
         />
       ) : null}
 
-      {newSection ? (
+      {newSection || editingSection ? (
         <SectionModal
-          onClose={() => setNewSection(false)}
+          key={editingSection?.id ?? 'new'}
+          section={editingSection ?? undefined}
+          onClose={() => {
+            setNewSection(false)
+            setEditingSection(null)
+          }}
           onSaved={async () => {
             setNewSection(false)
+            setEditingSection(null)
             saved()
             await load()
           }}
@@ -183,13 +193,28 @@ export default function GalleryPage() {
   )
 }
 
-function SectionModal({ onClose, onSaved, onError }: { onClose: () => void; onSaved: () => void; onError: (t: string) => void }) {
-  const [title, setTitle] = useState('')
-  const [blurb, setBlurb] = useState('')
+/**
+ * New section, or edits to an existing one. The slug is fixed at creation and
+ * not re-derived on rename: it is the section's address on the public Photo
+ * Tour, and changing it would break any link already shared.
+ */
+function SectionModal({
+  section,
+  onClose,
+  onSaved,
+  onError,
+}: {
+  section?: GalleryCategoryDTO
+  onClose: () => void
+  onSaved: () => void
+  onError: (t: string) => void
+}) {
+  const [title, setTitle] = useState(section?.title ?? '')
+  const [blurb, setBlurb] = useState(section?.blurb ?? '')
   const [busy, setBusy] = useState(false)
 
   return (
-    <Modal title="New gallery section" onClose={onClose}>
+    <Modal title={section ? `Edit section — ${section.title}` : 'New gallery section'} onClose={onClose}>
       <div className="space-y-4">
         <Field label="Title" required hint="e.g. Campus, Laboratories, Convocation">
           <Input value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -201,7 +226,9 @@ function SectionModal({ onClose, onSaved, onError }: { onClose: () => void; onSa
           disabled={busy}
           onClick={async () => {
             setBusy(true)
-            const res = await postJson('/api/admin/gallery', { type: 'category', title, blurb })
+            const res = section
+              ? await putJson(`/api/admin/gallery/category/${section.id}`, { title, blurb })
+              : await postJson('/api/admin/gallery', { type: 'category', title, blurb })
             setBusy(false)
             if (!res.ok) {
               onError(res.error)
@@ -210,7 +237,7 @@ function SectionModal({ onClose, onSaved, onError }: { onClose: () => void; onSa
             onSaved()
           }}
         >
-          {busy ? 'Saving…' : 'Create section'}
+          {busy ? 'Saving…' : section ? 'Save changes' : 'Create section'}
         </Button>
       </div>
     </Modal>

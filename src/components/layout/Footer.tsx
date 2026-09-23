@@ -95,8 +95,15 @@ export async function Footer() {
 
       <div className="chrome-topbar text-jnu-200">
         <div className="boxed flex flex-wrap items-center justify-between gap-2 py-3 text-xs">
+          {/*
+            No current year. These pages are prerendered, so `getFullYear()`
+            froze whatever year the last build ran in and then sat there
+            looking stale until someone rebuilt. The founding year is a fact
+            that never goes out of date; the notice reads correctly without
+            the second half.
+          */}
           <p className="m-0">
-            © {site.established ? `${site.established}–` : ""}{new Date().getFullYear()} {site.legalName}. All rights reserved.
+            © {site.established ? `${site.established} ` : ''}{site.legalName}. All rights reserved.
           </p>
           <nav aria-label="Legal" className="flex gap-4">
             <Link

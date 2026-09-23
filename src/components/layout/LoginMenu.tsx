@@ -119,7 +119,7 @@ export function LoginMenu() {
         // first name only, so a long name does not push the masthead onto
         // two lines.
         aria-label={student ? `Account menu for ${student.fullName}` : undefined}
-        className="btn btn-primary inline-flex max-w-[200px] items-center gap-1.5"
+        className="btn btn-primary inline-flex max-w-[200px] items-center gap-1.5 max-sm:px-2.5 max-sm:text-[11px]"
       >
         {student ? (
           <>
@@ -148,7 +148,7 @@ export function LoginMenu() {
           id="login-menu"
           role="menu"
           aria-label={student ? 'Account' : 'Login'}
-          className="absolute right-0 top-full z-50 mt-1 w-64 border border-hair bg-white shadow-chrome"
+          className="absolute right-0 top-full z-50 mt-1 w-64 max-w-[calc(100vw-2rem)] border border-hair bg-white shadow-chrome"
         >
           {student ? (
             <div className="border-b border-hair bg-shell px-4 py-2.5">

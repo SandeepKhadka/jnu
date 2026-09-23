@@ -35,6 +35,8 @@ const GROUPS: Group[] = [
       { href: '/admin/notices', label: 'Notices', icon: 'notices', permission: 'content.edit' },
       { href: '/admin/gallery', label: 'Photo gallery', icon: 'gallery', permission: 'content.edit' },
       { href: '/admin/menu', label: 'Menus', icon: 'menu', permission: 'content.edit' },
+      { href: '/admin/documents', label: 'Affiliations & syllabus', icon: 'pages', permission: 'content.edit' },
+      { href: '/admin/popup', label: 'Pop-up notice', icon: 'notices', permission: 'content.edit' },
       { href: '/admin/media', label: 'Media library', icon: 'media', permission: 'content.edit' },
     ],
   },
@@ -52,6 +54,7 @@ const GROUPS: Group[] = [
     items: [
       { href: '/admin/applications', label: 'Applications', icon: 'applications', permission: 'applications.manage' },
       { href: '/admin/enquiries', label: 'Enquiries', icon: 'enquiries', permission: 'enquiries.manage' },
+      { href: '/admin/counselling', label: 'Online counselling', icon: 'enquiries', permission: 'counselling.manage' },
     ],
   },
   {

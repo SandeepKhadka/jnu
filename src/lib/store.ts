@@ -248,6 +248,32 @@ export async function importResults(
   return res.ok ? res.data.created : 0
 }
 
+/**
+ * Edit a result. The server refuses this while the result is published,
+ * because a printed marksheet carries a serial that must keep matching the
+ * record — unpublish first, which withdraws that serial, then edit.
+ */
+export async function updateResult(
+  id: string,
+  input: Omit<ResultRecord, 'id' | 'published' | 'roll_no'>
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await api<{ result: ApiResult }>(`/api/results/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      studentName: input.student_name,
+      programme: input.programme,
+      semester: input.semester,
+      examSession: input.exam_session,
+      subjects: input.subjects,
+      marksObtained: input.marks_obtained,
+      marksMax: input.marks_max,
+      sgpa: input.sgpa,
+      status: input.status,
+    }),
+  })
+  return res.ok ? { ok: true } : res
+}
+
 export async function setResultPublished(id: string, published: boolean): Promise<void> {
   await api(`/api/results/${id}`, {
     method: 'PATCH',

@@ -38,7 +38,7 @@ protect that, and they are documented in section 4. Do not undo them.
 | Framework | Next.js 15 (App Router), React 19, TypeScript 5.6 (strict) |
 | Styling | Tailwind CSS 3 — no component library |
 | ORM | Prisma 6 |
-| Database | SQLite in development (`prisma/dev.db`); **must become Postgres in production** |
+| Database | **Postgres** everywhere (Neon in production and in development). Was SQLite; migrations were regenerated for the new dialect |
 | Auth | JWT in httpOnly cookies via `jose`; password hashing via `bcryptjs` |
 | Images | `sharp` — AVIF/WebP/JPEG at multiple widths, generated at upload |
 | QR codes | `qrcode` — on marksheets and degree certificates |
@@ -46,7 +46,10 @@ protect that, and they are documented in section 4. Do not undo them.
 | Icons | Hand-written inline SVG (`src/components/admin/icons.tsx`). **No icon package.** |
 
 Full dependency list is in `package.json`. The runtime dependency list is
-deliberately nine packages long. Adding a dependency is a decision that needs
+deliberately eleven packages long (`sharp` is one of them — admin uploads need
+it at runtime, so it must not be moved back to `devDependencies`;
+`@vercel/blob` is imported lazily by `object-store.ts` and is only reached
+when Blob credentials are set). Adding a dependency is a decision that needs
 justifying, not a reflex.
 
 ---
@@ -56,7 +59,7 @@ justifying, not a reflex.
 ```bash
 npm install
 cp .env.local.example .env.local     # then edit — see section 3.2
-npx prisma migrate deploy            # creates prisma/dev.db
+npx prisma migrate deploy            # applies to the Postgres in DATABASE_URL
 npm run db:seed                      # site content only, no fake people
 npm run admin:create -- --email you@example.com --name "Your Name"
 npm run dev                          # http://localhost:3000
@@ -76,6 +79,10 @@ npm run dev                          # http://localhost:3000
 | `npm run admin:create` | Creates a staff administrator, prompts for a password without echoing |
 | `npm run images -- <folder>` | Runs the sharp pipeline over a folder of source photographs |
 
+There is deliberately **no `db:reset` script** (it was removed: it wrapped
+`prisma migrate reset --force`). A `lint` script exists but ESLint is not
+configured, so it stops at an interactive setup prompt — do not use it.
+
 **Performance note you will otherwise waste a day on.** `npm run dev` serves
 pages in 200 ms–1.4 s because Next.js compiles each route the first time it is
 visited. The same pages in a production build serve in **5–30 ms**. This was
@@ -90,18 +97,20 @@ These are the variables the code actually reads:
 
 | Variable | Purpose |
 |---|---|
-| `DATABASE_URL` | Prisma connection string. `file:./dev.db` locally |
+| `DATABASE_URL` | Postgres connection string. Use the **pooled** one (`-pooler`) — queries only |
+| `DIRECT_URL` | The **unpooled** Postgres URL. `prisma migrate` only; a pooler does not carry its advisory locks |
 | `AUTH_SECRET` | Signs session JWTs. **≥32 chars, different in production** |
 | `NEXT_PUBLIC_SITE_URL` | Absolute origin. Wrong value ⇒ wrong canonicals ⇒ SEO damage |
-| `UPLOAD_DIR` | Where applicant documents are written. Default `./var/uploads` |
-| `MEDIA_DIR` | Where admin-uploaded media is written. Default `./var/media` |
+| `UPLOAD_DIR` | Where applicant documents go when not using Blob. Default `./var/uploads` |
+| `MEDIA_DIR` | Where admin media goes when not using Blob. Default `./var/media` |
+| `BLOB_READ_WRITE_TOKEN` / `BLOB_STORE_ID` | Either one switches `object-store.ts` from disk to a **private** Vercel Blob store. Set by Vercel when the store is connected |
 | `NEXT_PUBLIC_SHOW_MAINTAINER_NOTES` | Shows TODO notes on rendered pages while drafting content |
 | `ADMIN_PASSWORD` | Only read by `scripts/create-admin.ts`, for non-interactive setup |
 
-⚠️ **`.env.local.example` is out of date.** It still lists
-`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from an
-abandoned early direction — nothing in the codebase reads them — and it does
-not mention `MEDIA_DIR`. Fixing that file is a good first task.
+`UPLOAD_DIR` and `MEDIA_DIR` fall back with `||`, so an empty value is
+treated as "not configured". With `??` an empty `UPLOAD_DIR=` resolved to
+`""` and wrote identity documents into the project root, which `.gitignore`
+does not cover. `.env.local.example` documents exactly the variables above.
 
 ---
 
@@ -168,6 +177,7 @@ var/media, var/uploads   Written at runtime. NOT under public/. Not in git
 | `admin-route.ts` | `requirePermission`, `body`, `s()`, `InputError`, `audit()` |
 | `admin-client.ts` | The browser-side fetch wrapper every admin screen uses |
 | `dashboard.ts` | Dashboard aggregation queries |
+| `object-store.ts` | Where uploaded bytes live: local disk, or a private Vercel Blob store. The only module that touches a filesystem or a storage SDK |
 | `media.ts` / `media-shared.ts` | sharp pipeline, variant storage, srcset helpers |
 | `marksheet.ts` / `marksheet-token.ts` | Marksheet generation and signed verify tokens |
 | `ratelimit.ts` | Database-backed rate limiting |
@@ -177,11 +187,11 @@ var/media, var/uploads   Written at runtime. NOT under public/. Not in git
 
 ## 5. Data model
 
-Nineteen Prisma models in `prisma/schema.prisma`:
+Twenty Prisma models in `prisma/schema.prisma`:
 
 **People & access** — `Staff`, `Student`, `RateLimit`, `AuditLog`
 **Academic records** — `Result`, `Certificate`, `CorrectionRequest`
-**Admissions** — `Application`, `Enquiry`, `Upload`
+**Admissions** — `Application`, `Enquiry`, `Counselling`, `Upload`
 **Content** — `Setting`, `Page`, `Faculty`, `Programme`, `Notice`, `Slide`,
 `GalleryCategory`, `GalleryPhoto`, `Media`
 
@@ -203,11 +213,21 @@ Nineteen Prisma models in `prisma/schema.prisma`:
    `content-types.ts` is what stops stored XSS. Do not add a rich-text field
    that stores markup.
 6. **`safeHref` rejects `javascript:` URLs.** All admin-supplied links go
-   through it.
+   through it, including the pop-up notice's links.
+7. **`Counselling` deliberately stores no Aadhaar number at all** — not even
+   the last four digits. It is a request for a call back, not an admission,
+   and the DPDP Act's yardstick is what the purpose needs. Its uploads are
+   optional and are deleted with the row, which is how an erasure request is
+   honoured. Do not "bring it in line" with `Application`; they exist for
+   different purposes.
+8. **`UPLOAD_DIR` / `MEDIA_DIR` fall back with `||`, not `??`.** An empty
+   value means "not configured". With `??`, `UPLOAD_DIR=` (the state you get
+   by copying the example file) resolved to `""`, and identity documents were
+   written into the project root, which `.gitignore` does not cover.
 
 ### Migrations
 
-Six migrations exist under `prisma/migrations/`. Use `npx prisma migrate dev`
+Seven migrations exist under `prisma/migrations/`. Use `npx prisma migrate dev`
 to create new ones. **Never run `prisma migrate reset` against a database with
 real data** — prefer targeted `deleteMany` on verified rows.
 
@@ -231,8 +251,10 @@ that have it. It is read by **both** the API (`requirePermission`) and the
 sidebar (`AdminShell`), so the menu and the enforcement cannot drift apart.
 
 Four roles: **admin** (everything), **registrar** (students, degrees,
-corrections, admissions, recognition, exams), **exam_cell** (students, results,
-photo approvals), **editor** (website content only — no student data).
+corrections, admissions, counselling, recognition, exams), **exam_cell**
+(students, results, photo approvals), **editor** (website content only — no
+student data, and no counselling, because those can carry an identity
+document).
 
 **Hiding a link is a convenience, never the control.** Every route re-checks.
 When you add an admin screen you must add its permission to the matrix *and*
@@ -249,10 +271,10 @@ fallback login "for convenience".
 Roughly twenty screens under `src/app/admin/(panel)/`:
 
 **Website** — Homepage, Carousel, Pages, Faculties & programmes, Notices, Photo
-gallery, Menus, Media library
+gallery, Menus, Affiliations & syllabus, Pop-up notice, Media library
 **Students & records** — Students (search, CSV import, per-student detail),
 Results, Degrees, Student requests (photo + correction approvals)
-**Admissions** — Applications, Enquiries
+**Admissions** — Applications, Enquiries, Online counselling
 **Settings** — Site details, Logo & branding, Recognition, Examinations, Staff
 accounts, Audit log
 
@@ -287,6 +309,31 @@ audit entries.
   reintroduce multi-colour status charts without re-validating.
 
 ---
+
+### Public-site features driven from the panel
+
+- **Online Counselling** (`src/components/site/CounsellingButton.tsx`) — the
+  header call to action. It draws attention with a pulsing halo, not a blink:
+  WCAG 2.3.1 treats flashing above three times a second as a seizure risk, and
+  `.attention-pulse` is switched off entirely under `prefers-reduced-motion`.
+  The form posts multipart to `/api/counselling/`; submissions land in
+  Admin → Online counselling.
+- **Pop-up notice** (`src/components/site/NoticePopup.tsx`) — an announcement
+  styled as an official notice: sand banner, ruled heading, and "key points"
+  shown as red text. The points are deliberately **not links** — nothing in
+  the dialog navigates, so nobody is carried out of a notice they have not
+  finished reading. Edited at Admin → Pop-up notice.
+  **Dismissal is not remembered**: it reappears on every page load and
+  refresh, by the client's choice, so the enabled switch is the only thing
+  that stops it. It does not re-show on client-side navigation, because the
+  component lives in the layout and stays mounted.
+  It is **not** server-rendered: it is an overlay, and prerendering it would
+  cost layout stability on the page Google measures.
+- **Affiliations & syllabus** (`/affiliations/`, `/admission/syllabus/`) — two
+  tables of PDFs, edited on one screen at Admin → Affiliations & syllabus.
+  Documents come from the media library, so one file can serve both lists. A
+  row with no PDF still renders, marked "Not yet available" — an affiliation
+  the university claims is information even before the letter is uploaded.
 
 ## 8. Student portal, results and certificates
 
@@ -346,9 +393,23 @@ Uploads go through `sharp`:
 - **EXIF and GPS data stripped** — location data in photographs is a privacy leak
 - **Magic-byte sniffing**, not extension trust
 - **SVG rejected outright** (it is a script vector)
-- Written to `MEDIA_DIR` / `UPLOAD_DIR`, **never under `public/`** — anything
-  under `public/` is served to the world, and applicant documents must not be.
-  They are served instead through `/api/uploads/[id]` behind an auth check.
+- Written through `src/lib/object-store.ts`, **never under `public/`** —
+  anything under `public/` is served to the world, and applicant documents
+  must not be. They are served through `/api/uploads/[id]` behind an auth
+  check, and media through `/media/[id]/[name]`.
+
+**Where the bytes go.** `object-store.ts` picks its backend at runtime: local
+disk (`UPLOAD_DIR` / `MEDIA_DIR`) normally, and **Vercel Blob** when
+`BLOB_READ_WRITE_TOKEN` or `BLOB_STORE_ID` is set. Nothing else in the
+codebase knows the difference, so a developer with no Vercel account keeps
+working against the disk.
+
+⚠️ **The Blob store must be created with `private` access.** A public store
+hands out URLs that work for anyone holding them, and this application stores
+Aadhaar scans. Vercel fixes a store's access mode at creation and it cannot be
+changed afterwards. Both file routes still check a session first, so the
+private store is defence in depth rather than the only control — but a public
+store would make that check bypassable by anyone who learned a URL.
 
 `images: { unoptimized: true }` is set in `next.config.mjs` because the pipeline
 already produced the variants; Next's optimiser would re-do the work.
@@ -370,7 +431,10 @@ shadows, focus rings, a navy gradient sidebar. Keep that split.
 
 ## 12. Git and delivery conventions
 
-- Branch: `master`. Remote: `github.com/SandeepKhadka/jnu` (private).
+- Branch: `master`. Remote: `github.com/sandeepkhadka49356-ctrl/jnu`.
+  Transferred from `SandeepKhadka/jnu`; that URL still redirects, but set
+  `git remote set-url` rather than relying on it. **The repository is
+  public** — it was described as private here for a long time, and it is not.
 - **The client, Sandeep Khadka, is the sole author of record on every commit.**
   **Never add `Co-Authored-By:` trailers, "Generated with…" footers, or any
   other AI/tool attribution to commit messages or pull request descriptions.**
@@ -408,20 +472,14 @@ shadows, focus rings, a navy gradient sidebar. Keep that split.
 
 Honest list of what is not finished:
 
-- [ ] **`.env.local.example` is stale** — lists two Supabase variables nothing
-      reads, omits `MEDIA_DIR` (section 3.2)
-- [ ] **`README.md` has a broken section** — "### Staff logins" ends in a colon
-      with nothing after it, left over from removing the demo-credentials table
 - [ ] **`DEPLOY.md` is written for an academic viva**, not a client handover.
       Rewrite Parts 3–4 for the client's context
-- [ ] **Still on SQLite.** Production needs Postgres: change the provider in
-      `prisma/schema.prisma`, set `DATABASE_URL`, re-run migrations
-- [ ] **Local-filesystem media will not survive a serverless host.** On Vercel
-      the filesystem is ephemeral — move `MEDIA_DIR`/`UPLOAD_DIR` to object
-      storage, or host somewhere with a persistent volume (Render, a VPS)
-- [ ] **Admin password policy is inconsistent.** The panel enforces 12
-      characters for every account, but the first administrator was created
-      from the command line with a 10-character password. Rotate it
+- [ ] **There is no administrator account in this database.** The `Staff`
+      table is empty, so nobody can sign in until someone runs
+      `npm run admin:create` (section 3). An earlier draft of this document
+      claimed a first administrator existed with a 10-character password that
+      needed rotating; that was not true of this database. Verify the same on
+      any environment before assuming access exists
 - [ ] **The database has no real student, application or enquiry data yet**, so
       dashboard charts read zero. That is correct behaviour, not a bug
 - [ ] **No automated test suite.** Verification to date has been typecheck +
@@ -452,13 +510,28 @@ could not verify a claim, say so rather than implying you checked.
 
 ## 16. Deployment
 
+**Live preview:** <https://jnu-one.vercel.app> — Vercel, deployed from
+`master` of `github.com/sandeepkhadka49356-ctrl/jnu`. Postgres is Neon;
+uploads go to a **private** Vercel Blob store (section 10). Two database URLs
+are set: `DATABASE_URL` pooled for queries, `DIRECT_URL` unpooled for
+migrations. A free Neon compute suspends when idle, so the first request after
+a quiet period waits a few seconds for it to wake.
+
+
 `DEPLOY.md` has the step-by-step. Summary:
 
-1. Provision Postgres; switch the Prisma provider; set `DATABASE_URL`.
-2. Set `AUTH_SECRET` to a fresh 48-byte random string.
+Steps 1 and 4 below are **already done** for the live preview and are listed
+for anyone standing up a second environment.
+
+1. Provision Postgres and set `DATABASE_URL` (pooled) and `DIRECT_URL`
+   (unpooled). The Prisma provider is already `postgresql`.
+2. Set `AUTH_SECRET` to a fresh 48-byte random string, different from any
+   other environment's.
 3. Set `NEXT_PUBLIC_SITE_URL` to the real origin — **this one silently ruins
    SEO if wrong**, because every canonical URL is built from it.
-4. Point `MEDIA_DIR` and `UPLOAD_DIR` at persistent storage.
+4. Storage: connect a **private** Vercel Blob store, or point `MEDIA_DIR` and
+   `UPLOAD_DIR` at a persistent disk. `object-store.ts` picks the backend
+   from the environment.
 5. Deploy, run migrations, seed content, create the first administrator.
 6. Register the site in Google Search Console and submit the sitemap.
 

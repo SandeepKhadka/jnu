@@ -20,7 +20,12 @@ import { pageMetadata } from '@/lib/seo'
  */
 
 /** Content paths with a dedicated route file; their prose still comes from the CMS. */
-const OWNED_ELSEWHERE = new Set(['/admission/process/', '/photo-tour/'])
+const OWNED_ELSEWHERE = new Set([
+  '/admission/process/',
+  '/photo-tour/',
+  '/affiliations/',
+  '/admission/syllabus/',
+])
 
 export async function generateStaticParams() {
   const pages = await getPublishedPagePaths()

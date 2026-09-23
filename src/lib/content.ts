@@ -82,7 +82,11 @@ const loadSettings = perRequest(
 )
 
 export async function getSetting<K extends SettingKey>(key: K): Promise<SettingValue[K]> {
-  return (await loadSettings())[key]
+  // Falls back to the default when the key is missing. A cache entry written
+  // by an older deploy predates any setting added since, and would otherwise
+  // hand back undefined and take every page that reads it down with it —
+  // which is exactly what happened when the pop-up notice was introduced.
+  return (await loadSettings())[key] ?? SETTING_DEFAULTS[key]
 }
 
 export const getSite = () => getSetting('site')
@@ -126,6 +130,40 @@ async function readBranding(): Promise<ResolvedBranding> {
 }
 
 export const getBranding = perRequest(cached(readBranding, 'branding'))
+
+/* ==================================================== document listings */
+
+export type DocumentListDTO = {
+  intro: string
+  rows: { title: string; note: string; href: string | null }[]
+}
+
+/**
+ * Affiliations and syllabus: a titled row, a note and a PDF.
+ *
+ * The stored value holds a media id; the public page needs a URL, so the
+ * ids are resolved here in one query rather than one per row. A row whose
+ * document has since been deleted still renders — with no link — because a
+ * missing PDF should not blank the whole table.
+ */
+async function readDocumentList(key: 'affiliations' | 'syllabus'): Promise<DocumentListDTO> {
+  const list = await getSetting(key)
+  const ids = list.rows.map((r) => r.documentId).filter((v): v is string => !!v)
+  const media = ids.length
+    ? await db.media.findMany({ where: { id: { in: ids } }, select: { id: true, path: true } })
+    : []
+  return {
+    intro: list.intro,
+    rows: list.rows.map((r) => ({
+      title: r.title,
+      note: r.note,
+      href: (r.documentId && media.find((m) => m.id === r.documentId)?.path) || null,
+    })),
+  }
+}
+
+export const getAffiliations = perRequest(cached(() => readDocumentList('affiliations'), 'affiliations'))
+export const getSyllabus = perRequest(cached(() => readDocumentList('syllabus'), 'syllabus'))
 
 /* ======================================================= programmes */
 

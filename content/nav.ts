@@ -22,6 +22,7 @@ export const nav: NavItem[] = [
       { label: 'Infrastructure', href: '/about/infrastructure/' },
       { label: 'Academic Council', href: '/about/academic-council/' },
       { label: 'Accreditation & Approvals', href: '/about/accreditation/' },
+      { label: 'Affiliations', href: '/affiliations/' },
       { label: 'Achievers', href: '/about/achievers/' },
       { label: 'Community Programme', href: '/about/community-programme/' },
     ],
@@ -67,7 +68,7 @@ export const nav: NavItem[] = [
     children: [
       { label: 'Notices & Circulars', href: '/notices/' },
       { label: 'Student Login', href: '/student/login/' },
-      { label: 'Examination Results', href: '/results/', noindex: true },
+      { label: 'Results', href: '/results/', noindex: true },
       { label: 'Certificate Verification', href: '/verify/' },
       { label: 'Time Table', href: '/student-zone/time-table/' },
       { label: 'Enrollment Status', href: '/student-zone/enrollment-status/' },

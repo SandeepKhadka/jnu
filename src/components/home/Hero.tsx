@@ -115,7 +115,7 @@ export function Hero({ slides, home }: { slides: SlideDTO[]; home: HomeContent }
         if (!regionRef.current?.contains(e.relatedTarget as Node)) setFocused(false)
       }}
     >
-      <div className="relative h-[240px] overflow-hidden sm:h-[320px] md:h-[460px] lg:h-[520px]">
+      <div className="relative h-[210px] overflow-hidden sm:h-[340px] md:h-[560px] lg:h-[660px]">
         <div aria-live={rotating ? 'off' : 'polite'} className="h-full">
           {slides.map((s, i) => {
             const src = sources(s)
@@ -227,7 +227,7 @@ export function Hero({ slides, home }: { slides: SlideDTO[]; home: HomeContent }
 
 function Caption({ home }: { home: HomeContent }) {
   return (
-    <div className="my-4 max-w-xl rounded border border-white/15 bg-jnu-900/90 p-5 md:pointer-events-auto md:m-0 md:bg-jnu-900/80 md:p-7">
+    <div className="my-4 max-w-2xl rounded border border-white/15 bg-jnu-900/90 p-6 md:pointer-events-auto md:m-0 md:bg-jnu-900/80 md:p-9">
       {/*
         The homepage <h1>. It leads with the university's name — the query the
         page most needs to rank for — as a small eyebrow line, followed by what
@@ -235,14 +235,14 @@ function Caption({ home }: { home: HomeContent }) {
       */}
       <h1 className="m-0 font-display uppercase leading-tight tracking-wide text-white">
         {home.heroEyebrow ? (
-          <span className="mb-1.5 block text-[12px] tracking-[0.2em] text-sand-400 md:text-[13px]">
+          <span className="mb-2 block text-[13px] tracking-[0.2em] text-sand-400 md:text-[15px]">
             {home.heroEyebrow}
           </span>
         ) : null}
-        <span className="block text-[22px] md:text-[28px]">{home.heroHeadline}</span>
+        <span className="block text-[28px] md:text-[38px]">{home.heroHeadline}</span>
       </h1>
       {home.heroBody ? (
-        <p className="mb-5 mt-3 text-[14px] leading-relaxed text-jnu-100">{home.heroBody}</p>
+        <p className="mb-6 mt-4 text-[15.5px] leading-relaxed text-jnu-100">{home.heroBody}</p>
       ) : (
         <div className="mb-5" />
       )}

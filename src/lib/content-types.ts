@@ -377,6 +377,7 @@ export const DEFAULT_MENU: MenuItem[] = [
       { label: 'Infrastructure', href: '/about/infrastructure/' },
       { label: 'Academic Council', href: '/about/academic-council/' },
       { label: 'Accreditation & Approvals', href: '/about/accreditation/' },
+      { label: 'Affiliations', href: '/affiliations/' },
       { label: 'Achievers', href: '/about/achievers/' },
       { label: 'Community Programme', href: '/about/community-programme/' },
     ],
@@ -401,7 +402,7 @@ export const DEFAULT_MENU: MenuItem[] = [
     children: [
       { label: 'Notices & Circulars', href: '/notices/' },
       { label: 'Student Login', href: '/student/login/' },
-      { label: 'Examination Results', href: '/results/' },
+      { label: 'Results', href: '/results/' },
       { label: 'Certificate Verification', href: '/verify/' },
       { label: 'Time Table', href: '/student-zone/time-table/' },
       { label: 'Enrollment Status', href: '/student-zone/enrollment-status/' },
@@ -453,6 +454,93 @@ export const DEFAULT_FOOTER_LINKS: FooterLink[] = [
 
 export function normaliseFooterLinks(v: unknown): FooterLink[] {
   return menuItems(v, 1).map(({ label, href }) => ({ label, href }))
+}
+
+/* ========================================================= popup notice */
+
+/**
+ * The announcement shown over the home page on arrival.
+ *
+ * Typed fields, not markup: `body` is plain text and every link goes through
+ * safeHref, so an editor filling this in cannot inject a script or a
+ * `javascript:` URL into the first thing every visitor sees.
+ */
+export type PopupNotice = {
+  enabled: boolean
+  title: string
+  body: string
+  /** Shown as plain red text, deliberately not as links. */
+  points: string[]
+}
+
+export const DEFAULT_POPUP_NOTICE: PopupNotice = {
+  enabled: false,
+  title: '',
+  body: '',
+  points: [],
+}
+
+/**
+ * Accepts either a list of strings or the {label, href} shape the notice used
+ * when its entries were links, so a stored notice keeps its wording when the
+ * two are swapped over.
+ */
+function normalisePoints(v: unknown): string[] {
+  if (!Array.isArray(v)) return []
+  return v
+    .map((raw) => (typeof raw === 'string' ? str(raw, 200) : str(obj(raw).label, 200)))
+    .filter(Boolean)
+    .slice(0, 6)
+}
+
+export function normalisePopupNotice(v: unknown): PopupNotice {
+  const o = obj(v)
+  return {
+    enabled: o.enabled === true,
+    title: str(o.title, 160),
+    body: str(o.body, 2000),
+    points: normalisePoints(o.points ?? o.links),
+  }
+}
+
+/* ===================================================== document listings */
+
+/**
+ * A list of documents the public may open — affiliations and syllabus.
+ *
+ * Both pages are the same shape (a titled row, a note, and a PDF), so they
+ * share one type, one normaliser and one editor. `documentId` points at a
+ * Media row, which is how every other admin-uploaded file is referenced.
+ */
+export type DocumentRow = {
+  title: string
+  note: string
+  documentId: string | null
+}
+
+export type DocumentList = {
+  intro: string
+  rows: DocumentRow[]
+}
+
+export const DEFAULT_DOCUMENT_LIST: DocumentList = { intro: '', rows: [] }
+
+export function normaliseDocumentList(v: unknown): DocumentList {
+  const o = obj(v)
+  const rows = Array.isArray(o.rows) ? o.rows.slice(0, 200) : []
+  return {
+    intro: str(o.intro, 1000),
+    rows: rows
+      .map((raw) => {
+        const r = obj(raw)
+        return {
+          title: str(r.title, 200),
+          note: str(r.note, 500),
+          documentId: safeId(r.documentId),
+        }
+      })
+      .filter((r) => r.title),
+  }
 }
 
 /* =========================================================== recognition */
@@ -631,6 +719,9 @@ export type SettingKey =
   | 'recognition'
   | 'examinations'
   | 'certificateLayout'
+  | 'popupNotice'
+  | 'affiliations'
+  | 'syllabus'
 
 export type SettingValue = {
   site: SiteSettings
@@ -641,6 +732,9 @@ export type SettingValue = {
   recognition: Recognition
   examinations: Examinations
   certificateLayout: CertificateLayout
+  popupNotice: PopupNotice
+  affiliations: DocumentList
+  syllabus: DocumentList
 }
 
 export const SETTING_DEFAULTS: SettingValue = {
@@ -652,6 +746,9 @@ export const SETTING_DEFAULTS: SettingValue = {
   recognition: DEFAULT_RECOGNITION,
   examinations: DEFAULT_EXAMINATIONS,
   certificateLayout: DEFAULT_CERTIFICATE_LAYOUT,
+  popupNotice: DEFAULT_POPUP_NOTICE,
+  affiliations: DEFAULT_DOCUMENT_LIST,
+  syllabus: DEFAULT_DOCUMENT_LIST,
 }
 
 export const SETTING_NORMALISERS: { [K in SettingKey]: (v: unknown) => SettingValue[K] } = {
@@ -663,6 +760,9 @@ export const SETTING_NORMALISERS: { [K in SettingKey]: (v: unknown) => SettingVa
   recognition: normaliseRecognition,
   examinations: normaliseExaminations,
   certificateLayout: normaliseCertificateLayout,
+  popupNotice: normalisePopupNotice,
+  affiliations: normaliseDocumentList,
+  syllabus: normaliseDocumentList,
 }
 
 export function isSettingKey(v: unknown): v is SettingKey {

@@ -17,11 +17,38 @@
 
 @layer base {
   html {
+    color-scheme: only light;
     -webkit-text-size-adjust: 100%;
+  }
+
+  /*
+   * Nothing may scroll the page sideways. A single over-wide element — a long
+   * unbroken address, a wide table, a nav row that will not wrap — drags the
+   * whole layout and reads as a broken site on a phone. The named causes are
+   * fixed at source; this is the backstop. clip rather than hidden, because
+   * hidden creates a scroll container and would break position:sticky
+   * for descendants.
+   */
+  html, body {
+    /* clip, not hidden: hidden would create a scroll container and
+       stop the nav bar sticking. */
+    overflow-x: clip;
+    max-width: 100%;
   }
 
   body {
     @apply bg-shell text-ink font-sans;
+    /*
+     * The same grey again, as a gradient.
+     *
+     * Chrome on Android can be told to force dark on every site, and that
+     * setting overrides color-scheme. It re-computes background COLOURS and
+     * left the page shell almost black while the white cards on top of it
+     * stayed white — the reported fault. It does not touch background
+     * IMAGES, and a two-stop gradient of one colour is an image. Identical
+     * rendering everywhere else, so there is no cost to carrying it.
+     */
+    background-image: linear-gradient(#f4f4f4, #f4f4f4);
     font-size: 14px;
     line-height: 1.65;
   }
@@ -130,12 +157,32 @@
   }
 
   /* ---- dropdown nav --------------------------------------------------- */
+  /*
+   * Two different mechanisms, deliberately not shared.
+   *
+   * On a phone the panel is opened by JS: tapping a section toggles it, and
+   * the section's own page is offered as the first entry inside. Hover does
+   * not exist on touch, and :focus-within opened the panel on the same tap
+   * that followed the link — the menu appeared to flash open while the page
+   * navigated underneath it.
+   *
+   * From lg up, hover and focus-within open it as before and the mobile
+   * state is ignored.
+   */
   .nav-item > .nav-panel {
     display: none;
   }
-  .nav-item:hover > .nav-panel,
-  .nav-item:focus-within > .nav-panel {
+  .nav-item > .nav-panel.is-open {
     display: block;
+  }
+  @media (min-width: 1024px) {
+    .nav-item > .nav-panel.is-open {
+      display: none;
+    }
+    .nav-item:hover > .nav-panel,
+    .nav-item:focus-within > .nav-panel {
+      display: block;
+    }
   }
 
   /* ---- prose for inner content pages ---------------------------------- */
@@ -173,6 +220,23 @@
   }
 }
 
+/* ---- attention pulse (Online Counselling) ----------------------------
+   A pulsing halo rather than a true blink. WCAG 2.3.1 caps flashing at
+   three times a second because faster flashing can trigger photosensitive
+   seizures; a 2s ease cycle draws the eye without ever crossing that line,
+   and it stops completely under prefers-reduced-motion below.           */
+@keyframes jnu-attention {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(217, 155, 74, 0.7); }
+  50%      { box-shadow: 0 0 0 8px rgba(217, 155, 74, 0); }
+}
+.attention-pulse {
+  animation: jnu-attention 2s ease-out infinite;
+}
+.attention-pulse:hover,
+.attention-pulse:focus-visible {
+  animation-play-state: paused;
+}
+
 /* ---- marquee ticker (period-correct, but CSS not <marquee>) ----------- */
 @keyframes jnu-ticker {
   from { transform: translateX(0); }
@@ -189,6 +253,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .attention-pulse {
+    animation: none;
+  }
   .ticker-track {
     animation: none;
   }

@@ -20,6 +20,12 @@ export async function PUT(req: Request, ctx: Ctx) {
     if (kind === 'category') {
       const title = s(input.title, 80)
       if (!title) return fail('A section title is required.')
+      // Checked first so a section deleted by someone else mid-edit reports a
+      // 404 rather than surfacing a Prisma error as a 500.
+      if (!(await db.galleryCategory.findUnique({ where: { id }, select: { id: true } }))) {
+        return fail('Not found.', 404)
+      }
+      // The slug is left alone on purpose: it is the section's public address.
       const row = await db.galleryCategory.update({ where: { id }, data: { title, blurb: s(input.blurb, 300) } })
       await audit(user, 'gallery.category.update', row.title)
     } else if (kind === 'photo') {
@@ -28,6 +34,9 @@ export async function PUT(req: Request, ctx: Ctx) {
       const categoryId = s(input.categoryId, 40)
       if (categoryId && !(await db.galleryCategory.findUnique({ where: { id: categoryId }, select: { id: true } }))) {
         return fail('Choose a section.')
+      }
+      if (!(await db.galleryPhoto.findUnique({ where: { id }, select: { id: true } }))) {
+        return fail('Not found.', 404)
       }
       await db.galleryPhoto.update({
         where: { id },
