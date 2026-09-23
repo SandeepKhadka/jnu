@@ -176,9 +176,9 @@ export const DEFAULT_SITE: SiteSettings = {
   defaultDescription:
     'Jodhpur National University, Jodhpur — programmes in engineering, management, ' +
     'pharmacy, computer applications, law, education, sciences, arts and allied health.',
-  email: 'info@jodhpurnationaluniversity.co.in',
+  email: 'info@jodhpurnationaluniversityjodhpur.org',
   phone: '',
-  verificationEmail: 'jnuverification@gmail.com',
+  verificationEmail: 'verification@jodhpurnationaluniversityjodhpur.org',
   established: '2008',
   campus: { label: 'College Campus', lines: ['Jhanwar Road, Boranada', 'Jodhpur, Rajasthan', 'India'] },
   admissionOffice: {

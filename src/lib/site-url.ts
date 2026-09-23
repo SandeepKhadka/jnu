@@ -6,7 +6,7 @@
  *
  * Client-safe: NEXT_PUBLIC_ variables are inlined at build time.
  */
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://jodhpurnationaluniversity.co.in').replace(
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://jodhpurnationaluniversityjodhpur.org').replace(
   /\/$/,
   ''
 )

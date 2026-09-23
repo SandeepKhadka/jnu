@@ -177,7 +177,7 @@ Then sign in at `https://<your-project>.vercel.app/admin/login/` and
 
 Every `<link rel="canonical">`, every entry in `sitemap.xml` and every Open
 Graph tag is built from it. Unset, it falls back to
-`https://jodhpurnationaluniversity.co.in` — meaning your site tells Google
+`https://jodhpurnationaluniversityjodhpur.org` — meaning your site tells Google
 *"the real version of this page lives on someone else's domain, index that
 instead."* Your pages would never rank.
 
@@ -190,12 +190,32 @@ curl -s https://<your-project>.vercel.app/ | grep -o 'rel="canonical" href="[^"]
 
 ### 1.7 About the domain
 
-`jodhpurnationaluniversity.co.in` belongs to the real institution — you cannot
-host there. You will be on a free subdomain, which is fine for a college
-project.
+The site is served from **jodhpurnationaluniversityjodhpur.org**, registered
+through GoDaddy India.
 
-Do **not** try to outrank the real university for its own name. That is
-impersonation, and it competes with a live institution using its identity.
+**`jodhpurnationaluniversity.co.in` is a different site and is not under this
+project's control.** Two consequences follow, and neither is optional reading:
+
+1. **No ranking is inherited.** This is a new domain with no history. There is
+   no 301 redirect and no Search Console change-of-address available, because
+   both require control of the old domain. Expect months before the site ranks
+   for the university's own name, and plan for long-tail queries — individual
+   programmes, admission process, results, faculties — rather than the brand
+   term.
+
+2. **A generic `.org` does not geo-target India**, the way a `.co.in` does
+   automatically, and Google retired the manual international-targeting
+   setting. India targeting has to come from content signals instead: full
+   postal address in the schema, a Google Business Profile for the campus, and
+   the same name, address and phone number everywhere they appear.
+
+**Before the certificate module is made public**, have the university confirm
+in writing that it has commissioned this site at this domain. The system issues
+degree certificates and marksheets carrying the university's name, seal and a
+verification QR code. Certificate issuance under an institution's identity, on
+a domain that is not the institution's known web presence, is the kind of thing
+that has to be documented rather than assumed — for the developer's protection
+as much as anyone's.
 
 ---
 

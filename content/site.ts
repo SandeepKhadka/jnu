@@ -10,7 +10,7 @@ export const site = {
   tagline: 'Knowledge · Character · Service',
 
   // Used for canonicals, sitemap, OG. Override with NEXT_PUBLIC_SITE_URL.
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://jodhpurnationaluniversity.co.in',
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://jodhpurnationaluniversityjodhpur.org',
 
   // Kept close to the original so search intent still matches, but trimmed to
   // a length that will not be truncated in the SERP (~60 chars).
@@ -32,7 +32,7 @@ export const site = {
     lines: ['A-301, Anchal Complex', 'Residency Road', 'Jodhpur 342003, Rajasthan, India'],
   },
 
-  email: 'info@jodhpurnationaluniversity.co.in',
+  email: 'info@jodhpurnationaluniversityjodhpur.org',
 
   /**
    * Shown on the certificate verification page, for an employer or institution
@@ -43,7 +43,7 @@ export const site = {
    * than none, because a verification request that goes unanswered reads as
    * the university refusing to confirm its own record.
    */
-  verificationEmail: 'jnuverification@gmail.com',
+  verificationEmail: 'verification@jodhpurnationaluniversityjodhpur.org',
   phone: '',
 
   social: {
