@@ -431,7 +431,10 @@ shadows, focus rings, a navy gradient sidebar. Keep that split.
 
 ## 12. Git and delivery conventions
 
-- Branch: `master`. Remote: `github.com/SandeepKhadka/jnu` (private).
+- Branch: `master`. Remote: `github.com/sandeepkhadka49356-ctrl/jnu`.
+  Transferred from `SandeepKhadka/jnu`; that URL still redirects, but set
+  `git remote set-url` rather than relying on it. **The repository is
+  public** — it was described as private here for a long time, and it is not.
 - **The client, Sandeep Khadka, is the sole author of record on every commit.**
   **Never add `Co-Authored-By:` trailers, "Generated with…" footers, or any
   other AI/tool attribution to commit messages or pull request descriptions.**
@@ -471,11 +474,6 @@ Honest list of what is not finished:
 
 - [ ] **`DEPLOY.md` is written for an academic viva**, not a client handover.
       Rewrite Parts 3–4 for the client's context
-- [ ] **Still on SQLite.** Production needs Postgres: change the provider in
-      `prisma/schema.prisma`, set `DATABASE_URL`, re-run migrations
-- [ ] **Local-filesystem media will not survive a serverless host.** On Vercel
-      the filesystem is ephemeral — move `MEDIA_DIR`/`UPLOAD_DIR` to object
-      storage, or host somewhere with a persistent volume (Render, a VPS)
 - [ ] **There is no administrator account in this database.** The `Staff`
       table is empty, so nobody can sign in until someone runs
       `npm run admin:create` (section 3). An earlier draft of this document
@@ -522,11 +520,18 @@ a quiet period waits a few seconds for it to wake.
 
 `DEPLOY.md` has the step-by-step. Summary:
 
-1. Provision Postgres; switch the Prisma provider; set `DATABASE_URL`.
-2. Set `AUTH_SECRET` to a fresh 48-byte random string.
+Steps 1 and 4 below are **already done** for the live preview and are listed
+for anyone standing up a second environment.
+
+1. Provision Postgres and set `DATABASE_URL` (pooled) and `DIRECT_URL`
+   (unpooled). The Prisma provider is already `postgresql`.
+2. Set `AUTH_SECRET` to a fresh 48-byte random string, different from any
+   other environment's.
 3. Set `NEXT_PUBLIC_SITE_URL` to the real origin — **this one silently ruins
    SEO if wrong**, because every canonical URL is built from it.
-4. Point `MEDIA_DIR` and `UPLOAD_DIR` at persistent storage.
+4. Storage: connect a **private** Vercel Blob store, or point `MEDIA_DIR` and
+   `UPLOAD_DIR` at a persistent disk. `object-store.ts` picks the backend
+   from the environment.
 5. Deploy, run migrations, seed content, create the first administrator.
 6. Register the site in Google Search Console and submit the sitemap.
 
