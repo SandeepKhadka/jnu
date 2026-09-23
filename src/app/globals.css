@@ -183,6 +183,17 @@
     .nav-item:focus-within > .nav-panel {
       display: block;
     }
+    /*
+      Just navigated. A CSS-only dropdown has no way to know a link inside it
+      was followed: the pointer has not moved, so :hover still matches and the
+      panel sits open over the page the reader just asked for. MainNav adds
+      this class on navigation and removes it on the next pointer move, so the
+      panel shuts on click and behaves normally from the next hover onwards.
+    */
+    .chrome-nav.nav-just-navigated .nav-item:hover > .nav-panel,
+    .chrome-nav.nav-just-navigated .nav-item:focus-within > .nav-panel {
+      display: none;
+    }
   }
 
   /* ---- prose for inner content pages ---------------------------------- */
@@ -220,7 +231,7 @@
   }
 }
 
-/* ---- attention pulse (Online Counselling) ----------------------------
+/* ---- attention pulse (Education Consultancy Online) ----------------------------
    A pulsing halo rather than a true blink. WCAG 2.3.1 caps flashing at
    three times a second because faster flashing can trigger photosensitive
    seizures; a 2s ease cycle draws the eye without ever crossing that line,

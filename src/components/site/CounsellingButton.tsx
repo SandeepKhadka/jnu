@@ -5,7 +5,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { INDIAN_STATES } from '@/content/india'
 
 /**
- * "Online Counselling" — the pulsing call to action in the header, and the
+ * "Education Consultancy Online" — the pulsing call to action in the header, and the
  * form behind it.
  *
  * The button draws attention with a halo rather than a true blink: WCAG 2.3.1
@@ -27,7 +27,7 @@ export function CounsellingButton() {
         onClick={() => setOpen(true)}
         className="btn btn-sand attention-pulse max-sm:px-2.5 max-sm:text-[11px]"
       >
-        Online Counselling
+        Education Consultancy Online
       </button>
       {open ? <CounsellingModal onClose={() => setOpen(false)} /> : null}
     </>
@@ -101,7 +101,7 @@ function CounsellingModal({ onClose }: { onClose: () => void }) {
       >
         <div className="flex items-center justify-between gap-3 border-b border-hair bg-shell px-5 py-3">
           <h2 id={titleId} className="m-0 font-display text-[16px] uppercase tracking-wide text-jnu-800">
-            Online Counselling
+            Education Consultancy Online
           </h2>
           <button
             type="button"

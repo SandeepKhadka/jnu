@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 
 import { PageShell } from '@/components/layout/PageShell'
-import { StudentPortal } from '@/components/student/StudentPortal'
+import { ResultLookup } from '@/components/student/ResultLookup'
 import { pageMetadata } from '@/lib/seo'
 
 /**
@@ -10,18 +11,19 @@ import { pageMetadata } from '@/lib/seo'
  * Not an SEO sacrifice — student marks were never something we wanted in a
  * search index, and having them indexed would be a DPDP Act problem.
  *
- * This page used to take a roll number alone and return the marksheet. It now
- * goes through the student session like /student/ does. Keeping the old
- * unauthenticated lookup alongside the new login would have left two doors
- * into the same personal data with only one of them locked, so the login would
- * have secured nothing — and the marksheet now carries the candidate's date of
- * birth, both parents' names and photograph, which raises the cost of getting
- * that wrong.
+ * This page takes a roll number alone and returns the published result, with
+ * no sign-in, at the client's instruction. The disclosure that follows from
+ * that is spelled out in src/app/api/results/lookup/route.ts, which is where
+ * the decision about what to withhold actually lives.
+ *
+ * The signed-in portal at /student/ is unchanged and still carries the
+ * photograph, contact details and correction requests. This page shows the
+ * result and nothing else.
  */
 export async function generateMetadata(): Promise<Metadata> {
   return pageMetadata({
     title: 'Examination Results',
-    description: 'Students can view published examination results after signing in.',
+    description: 'Enter your roll number to view a published examination result.',
     path: '/results/',
     noindex: true,
   })
@@ -35,9 +37,17 @@ export default function ResultsPage() {
         { name: 'Student Zone', path: '/student-zone/' },
         { name: 'Examination Results', path: '/results/' },
       ]}
-      intro="Sign in with your roll number and date of birth to view a published result."
+      intro="Enter your roll number to view a published result. No sign-in is required."
     >
-      <StudentPortal />
+      <ResultLookup />
+
+      <p className="mt-8 text-[13px] text-muted">
+        Need your photograph, contact details or a correction request?{' '}
+        <Link href="/student/" className="text-jnu-700">
+          Sign in to the student portal
+        </Link>
+        .
+      </p>
     </PageShell>
   )
 }

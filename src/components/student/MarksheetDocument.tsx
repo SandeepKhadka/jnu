@@ -266,6 +266,69 @@ export function MarksheetDocument({
       </div>
 
       <style jsx>{`
+        /*
+          ------------------------------------------------ printed output
+
+          On paper the sheet is plain: white background, no engraved border,
+          no microprint wash, no seal. The client asked for this — the screen
+          preview can look like security stationery, but a marksheet a student
+          prints at home or saves as a PDF should be black on white. It also
+          stops the colour washes turning grey-on-grey when a browser prints
+          with backgrounds disabled, and stops a home printer spending its ink
+          on a full-bleed cream panel.
+
+          Declared first so the ordinary screen rules below still win on
+          screen; @media print outranks them only when printing.
+        */
+        @media print {
+          .ms-sheet,
+          .ms-guilloche {
+            background: #ffffff !important;
+            border: 0 !important;
+            outline: 0 !important;
+          }
+          .ms-inner {
+            background: #ffffff !important;
+            /* One plain rule, so the sheet still reads as a bounded document
+               without the two-colour engraved frame. */
+            border: 0.4mm solid #444 !important;
+            outline: 0 !important;
+          }
+          /* Microprint and the seal are rendered by sibling components, so
+             styled-jsx scopes their class names elsewhere — :global reaches
+             them. ms-crest-ghost is this component's own element. */
+          :global(.ms-micro),
+          :global(.ms-seal) {
+            display: none !important;
+          }
+          .ms-crest-ghost {
+            display: none !important;
+          }
+
+          /*
+            Every remaining tint goes too: the lilac address band, the pink
+            candidate panel, the striped table rows and the pink total row.
+            "Plain white" has to mean the whole sheet, not just the paper
+            behind it. Borders and text colour stay, so the structure is still
+            legible — it is the fills that are removed, not the rules.
+          */
+          .ms-band,
+          .ms-candidate,
+          .ms-ids,
+          .ms-foot,
+          .ms-table tbody tr:nth-child(even) td,
+          .ms-table tfoot td {
+            background: #ffffff !important;
+          }
+          /* The header row is white-on-navy on screen; inverted to dark-on-
+             white it still reads as a header because of the rule beneath. */
+          .ms-table th {
+            background: #ffffff !important;
+            color: #1b1f3b !important;
+            border-bottom: 0.4mm solid #1b1f3b !important;
+          }
+        }
+
         /* ------------------------------------------------ sheet + frame */
         .ms-sheet {
           width: 210mm;

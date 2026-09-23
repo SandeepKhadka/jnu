@@ -745,3 +745,29 @@ export async function verifyMarksheet(serial: string): Promise<MarksheetVerifyOu
   if (res.data.withdrawn) return { kind: 'withdrawn' }
   return { kind: 'not-found' }
 }
+
+/* ------------------------------------------------ public result lookup --- */
+
+/**
+ * Published results for a roll number, with no sign-in.
+ *
+ * Deliberately separate from getStudentPortal(): this one takes a roll number
+ * and returns only what /api/results/lookup is willing to disclose — no
+ * photograph, no contact details. The portal's own call stays session-scoped.
+ */
+export async function lookupResults(
+  rollNo: string
+): Promise<
+  { ok: true; student: StudentProfile; results: ResultRecord[] } | { ok: false; error: string }
+> {
+  const res = await api<{ student: StudentProfile; results: ApiResult[] }>(
+    '/api/results/lookup',
+    { method: 'POST', body: JSON.stringify({ rollNo }) }
+  )
+  if (!res.ok) return { ok: false, error: res.error }
+  return {
+    ok: true,
+    student: res.data.student,
+    results: (res.data.results ?? []).map(toResult),
+  }
+}

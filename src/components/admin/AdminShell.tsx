@@ -54,7 +54,7 @@ const GROUPS: Group[] = [
     items: [
       { href: '/admin/applications', label: 'Applications', icon: 'applications', permission: 'applications.manage' },
       { href: '/admin/enquiries', label: 'Enquiries', icon: 'enquiries', permission: 'enquiries.manage' },
-      { href: '/admin/counselling', label: 'Online counselling', icon: 'enquiries', permission: 'counselling.manage' },
+      { href: '/admin/counselling', label: 'Education consultancy', icon: 'enquiries', permission: 'counselling.manage' },
     ],
   },
   {

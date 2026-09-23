@@ -45,7 +45,7 @@ const TONE: Record<string, 'ok' | 'warn' | 'bad' | 'muted'> = {
 }
 
 /**
- * Online counselling requests from the public site.
+ * Education consultancy requests from the public site.
  *
  * Deleting is offered here and not on admissions, because a counselling lead
  * has no academic consequence and may hold an identity document belonging to
@@ -102,8 +102,8 @@ export default function CounsellingPage() {
   return (
     <div>
       <PageHeader
-        title="Online counselling"
-        description="Requests submitted through the Online Counselling button on the public site."
+        title="Education consultancy online"
+        description="Requests submitted through the Education Consultancy Online button on the public site."
       />
       <StatusLine status={msg} />
 

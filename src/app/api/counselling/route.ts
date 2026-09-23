@@ -58,7 +58,7 @@ export async function GET(req: Request) {
 }
 
 /**
- * POST /api/counselling — the public "Online Counselling" form.
+ * POST /api/counselling — the public "Education Consultancy Online" form.
  *
  * multipart/form-data, because a photograph may come with it. Files go
  * through lib/storage, which sniffs magic numbers and writes outside

@@ -199,7 +199,7 @@ function SignInForm({
 
 /* ----------------------------------------------------------- marksheet --- */
 
-function Marksheet({
+export function Marksheet({
   row,
   profile,
   onDownload,
@@ -255,36 +255,56 @@ function Marksheet({
                   <th className="border border-hair bg-shell px-3 py-2 text-left">Code</th>
                   <th className="border border-hair bg-shell px-3 py-2 text-left">Subject</th>
                   <th className="border border-hair bg-shell px-3 py-2 text-right">Max</th>
+                  {/*
+                    Theory and Practical were on the downloaded marksheet but
+                    not here, so the page and the PDF disagreed about how a
+                    total was arrived at. Same columns, same order, both places.
+                  */}
+                  <th className="border border-hair bg-shell px-3 py-2 text-right">Theory</th>
+                  <th className="border border-hair bg-shell px-3 py-2 text-right">Practical</th>
                   <th className="border border-hair bg-shell px-3 py-2 text-right">Obtained</th>
                   <th className="border border-hair bg-shell px-3 py-2 text-left">Grade</th>
                 </tr>
               </thead>
               <tbody>
-                {subjects.map((s, i) => (
-                  <tr key={`${s.code}-${i}`}>
-                    <td className="tnum border border-hair px-3 py-2">{s.code}</td>
-                    <td className="border border-hair px-3 py-2">{s.name}</td>
-                    <td className="tnum border border-hair px-3 py-2 text-right">{s.max}</td>
-                    <td
-                      className={`tnum border border-hair px-3 py-2 text-right ${
-                        s.obtained < s.max * 0.4 ? 'font-semibold text-[#a8322b]' : ''
-                      }`}
-                    >
-                      {s.obtained}
-                    </td>
-                    <td className="border border-hair px-3 py-2">{s.grade}</td>
-                  </tr>
-                ))}
+                {subjects.map((s, i) => {
+                  // Same fallbacks the marksheet uses: with no split recorded,
+                  // the whole mark is theory and there is no practical paper.
+                  const theory = typeof s.theory === 'number' ? s.theory : s.obtained
+                  const practical = typeof s.practical === 'number' ? s.practical : null
+                  return (
+                    <tr key={`${s.code}-${i}`}>
+                      <td className="tnum border border-hair px-3 py-2">{s.code}</td>
+                      <td className="border border-hair px-3 py-2">{s.name}</td>
+                      <td className="tnum border border-hair px-3 py-2 text-right">{s.max}</td>
+                      <td className="tnum border border-hair px-3 py-2 text-right">{theory}</td>
+                      <td className="tnum border border-hair px-3 py-2 text-right">{practical ?? '—'}</td>
+                      <td
+                        className={`tnum border border-hair px-3 py-2 text-right ${
+                          s.obtained < s.max * 0.4 ? 'font-semibold text-[#a8322b]' : ''
+                        }`}
+                      >
+                        {s.obtained}
+                      </td>
+                      <td className="border border-hair px-3 py-2">{s.grade}</td>
+                    </tr>
+                  )
+                })}
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={2} className="border border-hair bg-shell px-3 py-2 font-semibold">
+                  {/* The total row is the line anyone reads first — bold throughout. */}
+                  <td colSpan={2} className="border border-hair bg-shell px-3 py-2 font-bold">
                     Total
                   </td>
-                  <td className="tnum border border-hair bg-shell px-3 py-2 text-right font-semibold">
+                  <td className="tnum border border-hair bg-shell px-3 py-2 text-right font-bold">
                     {row.marks_max}
                   </td>
-                  <td className="tnum border border-hair bg-shell px-3 py-2 text-right font-semibold">
+                  {/* Theory and practical do not total meaningfully across
+                      subjects when some papers have no practical component. */}
+                  <td className="border border-hair bg-shell px-3 py-2 text-right">—</td>
+                  <td className="border border-hair bg-shell px-3 py-2 text-right">—</td>
+                  <td className="tnum border border-hair bg-shell px-3 py-2 text-right font-bold">
                     {row.marks_obtained}
                   </td>
                   <td className="border border-hair bg-shell px-3 py-2" />

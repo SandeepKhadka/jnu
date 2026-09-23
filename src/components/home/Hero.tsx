@@ -90,8 +90,6 @@ export function Hero({ slides, home }: { slides: SlideDTO[]; home: HomeContent }
   )
 
   const rotating = autoplay && !hovered && !focused && slides.length > 1
-  /** A text banner is on screen: show it whole and move the caption aside. */
-  const onBanner = Boolean(slides[index]?.banner)
 
   useEffect(() => {
     if (!rotating) return
@@ -103,9 +101,10 @@ export function Hero({ slides, home }: { slides: SlideDTO[]; home: HomeContent }
   }, [rotating, slides.length])
 
   return (
+    <>
     <section
       ref={regionRef}
-      className="relative border-b border-hair bg-jnu-900"
+      className="relative bg-jnu-900"
       aria-roledescription="carousel"
       aria-label="Campus photographs"
       onMouseEnter={() => setHovered(true)}
@@ -160,13 +159,11 @@ export function Hero({ slides, home }: { slides: SlideDTO[]; home: HomeContent }
           })}
         </div>
 
-        {/* Legibility shade under the caption on wide screens. */}
-        <div
-          aria-hidden="true"
-          className={`pointer-events-none absolute inset-0 hidden bg-gradient-to-r from-jnu-900/75 via-jnu-900/25 to-transparent transition-opacity duration-700 md:block ${
-            onBanner ? 'opacity-0' : 'opacity-100'
-          }`}
-        />
+        {/*
+          No legibility shade any more. Nothing is laid over the photograph, so
+          darkening it would only make the client's campus pictures muddier —
+          which is the opposite of what moving the caption out was for.
+        */}
 
         {slides.length > 1 ? (
           <>
@@ -206,28 +203,35 @@ export function Hero({ slides, home }: { slides: SlideDTO[]; home: HomeContent }
 
       </div>
 
-      {/*
-        Caption — rendered ONCE. It used to be two copies (an md+ overlay and a
-        stacked mobile version, each hidden at the other size), which put two
-        <h1> elements in the HTML: exactly the heading defect this component
-        was meant to fix. One element, positioned per breakpoint: below the
-        image on phones (the copy is taller than the mobile image, and
-        overlaying it spilled onto the nav), over it from md up.
-      */}
-      <div
-        className={`boxed relative z-[5] transition-opacity duration-700 md:pointer-events-none md:absolute md:inset-y-0 md:left-0 md:right-0 md:flex md:items-center ${
-          onBanner ? 'md:opacity-0 md:[&_*]:!pointer-events-none' : ''
-        }`}
-      >
+    </section>
+
+    {/*
+      Caption — rendered ONCE, in its own band below the carousel.
+
+      It used to sit over the photograph from md up. The client asked for it to
+      move: the carousel is the university's own campus photography and the
+      panel covered the half of every frame the building was in. Below it, the
+      pictures are seen whole and the copy is read against a flat colour
+      instead of whatever happens to be behind it in the current slide.
+
+      It stays a single element (it was once two copies, one per breakpoint,
+      which put two <h1> tags in the HTML) and it stays immediately after the
+      carousel, so the page's heading is still near the top of the document.
+    */}
+    <div className="border-b border-hair bg-jnu-900">
+      <div className="boxed py-7 md:py-10">
         <Caption home={home} />
       </div>
-    </section>
+    </div>
+    </>
   )
 }
 
 function Caption({ home }: { home: HomeContent }) {
   return (
-    <div className="my-4 max-w-2xl rounded border border-white/15 bg-jnu-900/90 p-6 md:pointer-events-auto md:m-0 md:bg-jnu-900/80 md:p-9">
+    // No panel, border or translucency: the band itself is the surface now,
+    // so the copy sits directly on it.
+    <div className="max-w-3xl">
       {/*
         The homepage <h1>. It leads with the university's name — the query the
         page most needs to rank for — as a small eyebrow line, followed by what
@@ -239,7 +243,7 @@ function Caption({ home }: { home: HomeContent }) {
             {home.heroEyebrow}
           </span>
         ) : null}
-        <span className="block text-[28px] md:text-[38px]">{home.heroHeadline}</span>
+        <span className="block text-[26px] md:text-[38px]">{home.heroHeadline}</span>
       </h1>
       {home.heroBody ? (
         <p className="mb-6 mt-4 text-[15.5px] leading-relaxed text-jnu-100">{home.heroBody}</p>

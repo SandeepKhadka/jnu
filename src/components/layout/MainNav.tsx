@@ -1,4 +1,9 @@
+'use client'
+
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
+
 import type { MenuItem } from '@/lib/content-types'
 
 /**
@@ -6,15 +11,44 @@ import type { MenuItem } from '@/lib/content-types'
  *
  * Hover-opened dropdowns, era-correct, and keyboard reachable: globals.css
  * opens `.nav-panel` on :hover and :focus-within, both scoped to lg and up.
- * That is the whole behaviour, so this needs no state and stays a server
- * component — the phone's drawer is the only part that needed JavaScript.
+ *
+ * The one thing CSS cannot do here is shut the panel after a link inside it is
+ * followed. Next navigates without a page load, so the pointer never leaves
+ * the panel, :hover still matches, and the menu stays open on top of the page
+ * the reader just chose. So: on every path change we suppress the panel, and
+ * release it again the moment the pointer actually moves. Hovering still opens
+ * it as before — this only covers the instant after a click.
  */
 export function MainNav({ items }: { items: MenuItem[] }) {
+  const pathname = usePathname()
+  const [justNavigated, setJustNavigated] = useState(false)
+
+  useEffect(() => {
+    setJustNavigated(true)
+    // :focus-within would hold the panel open on its own, and after a
+    // client-side navigation the clicked link keeps focus.
+    const active = document.activeElement
+    if (active instanceof HTMLElement && active.closest('.nav-panel')) active.blur()
+
+    const release = () => setJustNavigated(false)
+    // `once` on both: the first real pointer move or key press hands control
+    // back to the ordinary hover rules.
+    window.addEventListener('pointermove', release, { once: true })
+    window.addEventListener('keydown', release, { once: true })
+    return () => {
+      window.removeEventListener('pointermove', release)
+      window.removeEventListener('keydown', release)
+    }
+  }, [pathname])
+
   const itemLink =
     'block px-4 py-3 text-[13.5px] font-semibold uppercase tracking-[0.06em] text-white no-underline hover:bg-jnu-700 hover:text-white lg:py-4'
 
   return (
-    <nav aria-label="Main" className="chrome-nav hidden lg:block">
+    <nav
+      aria-label="Main"
+      className={`chrome-nav hidden lg:block ${justNavigated ? 'nav-just-navigated' : ''}`}
+    >
       <div className="boxed">
         <ul className="flex flex-wrap items-stretch">
           {items.map((item) => (
