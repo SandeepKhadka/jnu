@@ -36,6 +36,7 @@ const GROUPS: Group[] = [
       { href: '/admin/gallery', label: 'Photo gallery', icon: 'gallery', permission: 'content.edit' },
       { href: '/admin/menu', label: 'Menus', icon: 'menu', permission: 'content.edit' },
       { href: '/admin/documents', label: 'Affiliations & syllabus', icon: 'pages', permission: 'content.edit' },
+      { href: '/admin/distance-education', label: 'Distance education', icon: 'programmes', permission: 'content.edit' },
       { href: '/admin/popup', label: 'Pop-up notice', icon: 'notices', permission: 'content.edit' },
       { href: '/admin/media', label: 'Media library', icon: 'media', permission: 'content.edit' },
     ],

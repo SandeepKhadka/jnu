@@ -30,6 +30,7 @@ const ACCESS: Record<SettingKey, { write: Permission; read: Permission[] }> = {
   popupNotice: { write: 'content.edit', read: ['content.edit'] },
   affiliations: { write: 'content.edit', read: ['content.edit'] },
   syllabus: { write: 'content.edit', read: ['content.edit'] },
+  distanceEducation: { write: 'content.edit', read: ['content.edit'] },
 }
 
 async function mediaUrl(id: string | null, width: number): Promise<string | null> {

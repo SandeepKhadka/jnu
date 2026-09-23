@@ -390,6 +390,7 @@ export const DEFAULT_MENU: MenuItem[] = [
       { label: 'Admission Process', href: '/admission/process/' },
       { label: 'Eligibility', href: '/admission/eligibility/' },
       { label: 'Fee Structure', href: '/admission/fee-structure/' },
+      { label: 'Distance Education', href: '/distance-education/' },
       { label: 'Syllabus', href: '/admission/syllabus/' },
       { label: 'Download Forms', href: '/admission/download-forms/' },
     ],
@@ -540,6 +541,82 @@ export function normaliseDocumentList(v: unknown): DocumentList {
         }
       })
       .filter((r) => r.title),
+  }
+}
+
+/* ==================================================== distance education */
+
+/**
+ * One programme offered in distance mode.
+ *
+ * Durations and fees are free text rather than numbers: distance programmes
+ * are quoted as "3 years", "2 years (4 semesters)" or "1 year (lateral entry)"
+ * depending on the programme, and forcing them into a month count would lose
+ * what the office actually wants to publish.
+ */
+export type DistanceProgramme = {
+  name: string
+  award: string
+  duration: string
+  eligibility: string
+  fee: string
+  published: boolean
+}
+
+/**
+ * The Distance Education page.
+ *
+ * `approvalNote` starts EMPTY and stays empty until someone types a statement
+ * they can evidence. Distance programmes in India need UGC-DEB recognition,
+ * and an unevidenced approval claim on a university website is the single most
+ * damaging thing this site could publish — the same reasoning that put
+ * `recognition` behind its own permission and made evidence mandatory there.
+ * The page renders perfectly well with no such line, so the default is to say
+ * nothing rather than to say something unverified.
+ *
+ * `enabled` is the switch: off, the public page 404s and the menu entry is
+ * hidden, so the page can be prepared before the university announces it.
+ */
+export type DistanceEducation = {
+  enabled: boolean
+  intro: string
+  approvalNote: string
+  note: string
+  programmes: DistanceProgramme[]
+}
+
+export const DEFAULT_DISTANCE_EDUCATION: DistanceEducation = {
+  enabled: false,
+  intro: '',
+  approvalNote: '',
+  note: '',
+  programmes: [],
+}
+
+export function normaliseDistanceEducation(v: unknown): DistanceEducation {
+  const o = obj(v)
+  const list = Array.isArray(o.programmes) ? o.programmes.slice(0, 200) : []
+  return {
+    enabled: o.enabled === true,
+    intro: str(o.intro, 2000),
+    approvalNote: str(o.approvalNote, 500),
+    note: str(o.note, 2000),
+    programmes: list
+      .map((raw) => {
+        const p = obj(raw)
+        return {
+          name: str(p.name, 200),
+          award: str(p.award, 120),
+          duration: str(p.duration, 80),
+          eligibility: str(p.eligibility, 400),
+          fee: str(p.fee, 120),
+          // Absent means published, so a row added by an older client that
+          // does not send the flag does not silently vanish from the page.
+          published: p.published !== false,
+        }
+      })
+      // A row with no name has nothing to render.
+      .filter((p) => p.name),
   }
 }
 
@@ -722,6 +799,7 @@ export type SettingKey =
   | 'popupNotice'
   | 'affiliations'
   | 'syllabus'
+  | 'distanceEducation'
 
 export type SettingValue = {
   site: SiteSettings
@@ -735,6 +813,7 @@ export type SettingValue = {
   popupNotice: PopupNotice
   affiliations: DocumentList
   syllabus: DocumentList
+  distanceEducation: DistanceEducation
 }
 
 export const SETTING_DEFAULTS: SettingValue = {
@@ -749,6 +828,7 @@ export const SETTING_DEFAULTS: SettingValue = {
   popupNotice: DEFAULT_POPUP_NOTICE,
   affiliations: DEFAULT_DOCUMENT_LIST,
   syllabus: DEFAULT_DOCUMENT_LIST,
+  distanceEducation: DEFAULT_DISTANCE_EDUCATION,
 }
 
 export const SETTING_NORMALISERS: { [K in SettingKey]: (v: unknown) => SettingValue[K] } = {
@@ -763,6 +843,7 @@ export const SETTING_NORMALISERS: { [K in SettingKey]: (v: unknown) => SettingVa
   popupNotice: normalisePopupNotice,
   affiliations: normaliseDocumentList,
   syllabus: normaliseDocumentList,
+  distanceEducation: normaliseDistanceEducation,
 }
 
 export function isSettingKey(v: unknown): v is SettingKey {

@@ -165,6 +165,23 @@ async function readDocumentList(key: 'affiliations' | 'syllabus'): Promise<Docum
 export const getAffiliations = perRequest(cached(() => readDocumentList('affiliations'), 'affiliations'))
 export const getSyllabus = perRequest(cached(() => readDocumentList('syllabus'), 'syllabus'))
 
+/**
+ * Distance Education, with unpublished programmes removed.
+ *
+ * No cache wrapper of its own: it reads through getSetting, which is already
+ * tagged and deduplicated per request, and the filter is a few comparisons.
+ * A second unstable_cache layer here would only add a key to keep unique.
+ */
+export async function getDistanceEducation() {
+  const d = await getSetting('distanceEducation')
+  return { ...d, programmes: d.programmes.filter((p) => p.published) }
+}
+
+/** The admin editor needs the drafts too. */
+export function getDistanceEducationAdmin() {
+  return readSetting('distanceEducation')
+}
+
 /* ======================================================= programmes */
 
 async function readFaculties(includeUnpublished: boolean): Promise<FacultyDTO[]> {
