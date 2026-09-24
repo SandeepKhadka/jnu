@@ -287,11 +287,11 @@ export function MarksheetDocument({
             border: 0 !important;
             outline: 0 !important;
           }
+          /* No frame at all. A rule around the page is the last thing that
+             still read as decoration rather than as the document. */
           .ms-inner {
             background: #ffffff !important;
-            /* One plain rule, so the sheet still reads as a bounded document
-               without the two-colour engraved frame. */
-            border: 0.4mm solid #444 !important;
+            border: 0 !important;
             outline: 0 !important;
           }
           /* Microprint and the seal are rendered by sibling components, so
@@ -316,6 +316,7 @@ export function MarksheetDocument({
           .ms-candidate,
           .ms-ids,
           .ms-foot,
+          .ms-photo,
           .ms-table tbody tr:nth-child(even) td,
           .ms-table tfoot td {
             background: #ffffff !important;
@@ -324,8 +325,32 @@ export function MarksheetDocument({
              white it still reads as a header because of the rule beneath. */
           .ms-table th {
             background: #ffffff !important;
-            color: #1b1f3b !important;
-            border-bottom: 0.4mm solid #1b1f3b !important;
+            color: #000000 !important;
+            border-bottom: 0.4mm solid #000000 !important;
+          }
+
+          /*
+            Every remaining rule goes neutral. The maroon and gold borders on
+            the ids strip, the candidate panel and the marks table were the
+            "colourful border" still visible on paper once the fills had gone.
+            Black keeps the table legible and photocopies cleanly; the colour
+            was only ever decoration.
+          */
+          .ms-inner :global(*) {
+            border-color: #000000 !important;
+            outline-color: #000000 !important;
+          }
+
+          /*
+            Text too: labels were maroon, the location line gold, the footer
+            blue. :global on the descendant selector is required — the field
+            labels are <dt> elements rendered by a sibling component, so they
+            never carry this component's styled-jsx scope class, and a plain
+            descendant selector silently skipped every one of them.
+          */
+          .ms-inner,
+          .ms-inner :global(*) {
+            color: #000000 !important;
           }
         }
 

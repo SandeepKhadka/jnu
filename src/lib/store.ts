@@ -719,6 +719,10 @@ export type VerifiedMarksheet = {
   rollNo: string
   enrollmentNo: string | null
   studentName: string
+  /** Printed on the sheet, so returned for comparison against the paper. */
+  fatherName: string | null
+  motherName: string | null
+  dob: string | null
   programme: string
   semester: string
   examSession: string

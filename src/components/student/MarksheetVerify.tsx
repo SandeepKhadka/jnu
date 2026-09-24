@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 
 import { useSite } from '@/components/site/SiteProvider'
+import { formatNoticeDate } from '@/lib/content-types'
 import { divisionFor, dottedDate, percentageOf } from '@/lib/marksheet'
 import { verifyMarksheet, type MarksheetVerifyOutcome } from '@/lib/store'
 
@@ -142,6 +143,15 @@ function Outcome({ outcome }: { outcome: MarksheetVerifyOutcome }) {
           <Row label="Roll Number" value={s.rollNo} mono bold />
           <Row label="Enrollment No." value={s.enrollmentNo ?? '—'} mono />
           <Row label="Candidate Name" value={s.studentName} bold />
+          {/*
+            The identity fields printed on the sheet. Verifying a document
+            means checking the paper against the record, and without these an
+            employer can confirm the marks but not that the person in front of
+            them is the candidate they belong to.
+          */}
+          <Row label="Father's Name" value={s.fatherName ?? '—'} />
+          <Row label="Mother's Name" value={s.motherName ?? '—'} />
+          <Row label="Date of Birth" value={s.dob ? formatNoticeDate(s.dob) : '—'} mono />
           <Row label="Programme" value={s.programme} />
           <Row label="Semester / Session" value={`${s.semester} — ${s.examSession}`} />
           <Row label="Marks" value={`${s.marksObtained} / ${s.marksMax}`} mono />

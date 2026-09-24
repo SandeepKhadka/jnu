@@ -50,32 +50,40 @@ export async function GET(req: Request) {
         status: true,
         published: true,
         publishedAt: true,
-        student: { select: { enrollmentNo: true } },
+        // The identity fields PRINTED on the sheet. Verification means
+        // checking the paper against the record, so anything printed has to
+        // be checkable — otherwise an employer can confirm the marks but not
+        // that this is the same candidate. Nothing beyond what is on the
+        // document: no photograph, no contact details, no address.
+        student: {
+          select: { enrollmentNo: true, fatherName: true, motherName: true, dob: true },
+        },
       },
     })
 
     if (!row) return ok({ marksheet: null })
     if (!row.published) return ok({ marksheet: null, withdrawn: true })
 
-    // Enrollment number is printed on the sheet, so it is returned for
-    // comparison. Fall back to the register by roll number for results
-    // imported before the student link was set.
-    const enrollmentNo =
-      row.student?.enrollmentNo ??
-      (
-        await db.student.findUnique({
-          where: { rollNo: row.rollNo },
-          select: { enrollmentNo: true },
-        })
-      )?.enrollmentNo ??
-      null
+    // The printed identity fields are returned so the paper can be checked
+    // against the record. Results imported before the student link was set
+    // have no relation, so fall back to the register by roll number — one
+    // query for all four fields rather than one each.
+    const identity =
+      row.student ??
+      (await db.student.findUnique({
+        where: { rollNo: row.rollNo },
+        select: { enrollmentNo: true, fatherName: true, motherName: true, dob: true },
+      }))
 
     return ok({
       marksheet: {
         serial: formatSerial(token),
         rollNo: row.rollNo,
-        enrollmentNo,
+        enrollmentNo: identity?.enrollmentNo ?? null,
         studentName: row.studentName,
+        fatherName: identity?.fatherName ?? null,
+        motherName: identity?.motherName ?? null,
+        dob: identity?.dob ?? null,
         programme: row.programme,
         semester: row.semester,
         examSession: row.examSession,
