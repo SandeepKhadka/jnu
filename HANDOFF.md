@@ -510,12 +510,19 @@ could not verify a claim, say so rather than implying you checked.
 
 ## 16. Deployment
 
-**Live preview:** <https://jnu-one.vercel.app> — Vercel, deployed from
-`master` of `github.com/sandeepkhadka49356-ctrl/jnu`. Postgres is Neon;
-uploads go to a **private** Vercel Blob store (section 10). Two database URLs
-are set: `DATABASE_URL` pooled for queries, `DIRECT_URL` unpooled for
-migrations. A free Neon compute suspends when idle, so the first request after
-a quiet period waits a few seconds for it to wake.
+**Production domain:** `jodhpurnationaluniversityjodhpur.org`, registered at
+GoDaddy. Moving to a Mumbai VPS with PostgreSQL on the same box — the full
+runbook is `HOSTING.md`.
+
+**Previous preview:** <https://jnu-one.vercel.app>, deployed from `master` of
+`github.com/sandeepkhadka49356-ctrl/jnu`, with Neon Postgres and a private
+Vercel Blob store. Retained only until the VPS is live.
+
+⚠️ **`NEXT_PUBLIC_SITE_URL` on that preview was left pointing at a host that
+does not exist**, which is how certificates came to be printed with QR codes
+returning 404. It is inlined at build time, so it must be correct *before* a
+build, and no already-printed document can be corrected afterwards. Whatever
+this is set to is what gets stamped onto paper.
 
 
 `DEPLOY.md` has the step-by-step. Summary:

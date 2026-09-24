@@ -132,7 +132,7 @@ one thing to copy before any destructive change.
    | `DATABASE_URL` | the **pooled** Neon string (`-pooler` in the host) |
    | `DIRECT_URL` | the **unpooled** Neon string — migrations use this |
    | `AUTH_SECRET` | a long random string — generate it below |
-   | `NEXT_PUBLIC_SITE_URL` | `https://<your-project>.vercel.app` |
+   | `NEXT_PUBLIC_SITE_URL` | `https://jodhpurnationaluniversityjodhpur.org` — the real origin, never a preview URL |
 
    Generate the secret:
 
@@ -168,8 +168,8 @@ On Windows PowerShell:
 $env:DATABASE_URL="postgresql://...your neon string..."; npm run db:seed
 ```
 
-Then sign in at `https://<your-project>.vercel.app/admin/login/` and
-**change both demo passwords** before showing anyone the live URL.
+Then sign in at `https://jodhpurnationaluniversityjodhpur.org/admin/login/` and
+There are no demo accounts; create the first administrator with `npm run admin:create`.
 
 ### 1.6 The setting that breaks SEO if you skip it
 
@@ -184,8 +184,8 @@ instead."* Your pages would never rank.
 Check it after deploying:
 
 ```bash
-curl -s https://<your-project>.vercel.app/ | grep -o 'rel="canonical" href="[^"]*"'
-# must print YOUR domain
+curl -s https://jodhpurnationaluniversityjodhpur.org/ | grep -o 'rel="canonical" href="[^"]*"'
+# must print jodhpurnationaluniversityjodhpur.org
 ```
 
 ### 1.7 About the domain
@@ -308,7 +308,7 @@ published result and returns nothing for an unpublished one.
 | **Certificate sample** | To restyle `CertificateTemplate.tsx` to match the real design | You → me |
 | **Gallery photos** | `/photo-tour/` describes the campus but shows nothing | You |
 | Google verification tag | §2.1 | You |
-| Change demo passwords | Before the live URL goes anywhere | You |
+| Create the first administrator (`npm run admin:create`) | Before the site goes public | You |
 
 ---
 
