@@ -267,20 +267,25 @@ export function MarksheetDocument({
 
       <style jsx>{`
         /*
-          ------------------------------------------------ printed output
+          ------------------------------------- plain sheet, screen AND paper
 
-          On paper the sheet is plain: white background, no engraved border,
-          no microprint wash, no seal. The client asked for this — the screen
-          preview can look like security stationery, but a marksheet a student
-          prints at home or saves as a PDF should be black on white. It also
-          stops the colour washes turning grey-on-grey when a browser prints
-          with backgrounds disabled, and stops a home printer spending its ink
-          on a full-bleed cream panel.
+          White background, no engraved border, no microprint wash, no seal,
+          no coloured rules or labels. The client asked for this.
 
-          Declared first so the ordinary screen rules below still win on
-          screen; @media print outranks them only when printing.
+          It was scoped to @media print at first, on the reading that only the
+          download needed to change. That was wrong twice over: the preview is
+          what anyone actually looks at, so a decorative preview and a plain
+          printout read as the change never happening; and a document that
+          looks different on screen from the paper it produces is its own small
+          betrayal of trust when the paper is a degree marksheet.
+
+          Declared first, and every rule is !important, so it beats the
+          decorative rules further down regardless of source order.
+
+          It also stops the colour washes turning grey-on-grey when a browser
+          prints with backgrounds disabled, and stops a home printer spending
+          its ink on a full-bleed cream panel.
         */
-        @media print {
           .ms-sheet,
           .ms-guilloche {
             background: #ffffff !important;
@@ -352,7 +357,6 @@ export function MarksheetDocument({
           .ms-inner :global(*) {
             color: #000000 !important;
           }
-        }
 
         /* ------------------------------------------------ sheet + frame */
         .ms-sheet {
