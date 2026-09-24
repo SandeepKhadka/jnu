@@ -102,7 +102,7 @@ export function MobileBar({ items, utility }: { items: MenuItem[]; utility?: Rea
     'block px-4 py-3 text-[13.5px] font-semibold uppercase tracking-[0.06em] text-white no-underline'
 
   return (
-    <div className="lg:hidden">
+    <div className="xl:hidden">
       {/* Holds the strip's place in the flow. Must precede the masthead. */}
       <div aria-hidden="true" className="invisible">
         {stripInner}

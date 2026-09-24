@@ -7,7 +7,9 @@ import { useEffect, useState } from 'react'
 import type { MenuItem } from '@/lib/content-types'
 
 /**
- * The desktop menu bar. Hidden below lg, where MobileBar takes over.
+ * The desktop menu bar. Hidden below xl, where MobileBar takes over — eleven
+ * top-level items do not fit a 1210px row at tablet width, and a drawer reads
+ * better there than a bar wrapped onto two lines.
  *
  * Hover-opened dropdowns, era-correct, and keyboard reachable: globals.css
  * opens `.nav-panel` on :hover and :focus-within, both scoped to lg and up.
@@ -41,13 +43,19 @@ export function MainNav({ items }: { items: MenuItem[] }) {
     }
   }, [pathname])
 
+  // Tighter padding and letter-spacing than the rest of the chrome, so eleven
+  // top-level items stay on one row. The container is capped at 1210px
+  // (max-w-boxed) whatever the screen width, so this cannot be solved by
+  // assuming a wide monitor — at the previous spacing the items needed 1317px
+  // and Career and Contact dropped to a second line on every size. A menu bar
+  // that wraps reads as broken rather than as a design.
   const itemLink =
-    'block px-4 py-3 text-[13.5px] font-semibold uppercase tracking-[0.06em] text-white no-underline hover:bg-jnu-700 hover:text-white lg:py-4'
+    'block px-2.5 py-3 text-[13px] font-semibold uppercase tracking-[0.02em] text-white no-underline hover:bg-jnu-700 hover:text-white lg:py-4'
 
   return (
     <nav
       aria-label="Main"
-      className={`chrome-nav hidden lg:block ${justNavigated ? 'nav-just-navigated' : ''}`}
+      className={`chrome-nav hidden xl:block ${justNavigated ? 'nav-just-navigated' : ''}`}
     >
       <div className="boxed">
         <ul className="flex flex-wrap items-stretch">

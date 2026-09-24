@@ -58,7 +58,7 @@ export async function Header() {
       <MobileBar items={menu} utility={utility} />
 
       {/* ---- utility bar: desktop only. The phone gets MobileBar's strip. ---- */}
-      <div className="chrome-topbar hidden text-white lg:block">
+      <div className="chrome-topbar hidden text-white xl:block">
         <div className="boxed flex flex-wrap items-center justify-between gap-2 py-1.5 text-xs">
           {utility}
         </div>

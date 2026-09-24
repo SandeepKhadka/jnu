@@ -65,7 +65,41 @@ export default async function DistanceEducationPage() {
           Programmes offered in distance mode will be listed here.
         </p>
       ) : (
-        <div className="mt-6 overflow-x-auto">
+        <>
+        {/*
+          Phones get a card per programme, not a scrolling table. Five columns
+          need about 423px and a 390px phone offers 358px, so the table version
+          put a horizontal scrollbar inside the page — the one thing on the
+          site that scrolled sideways. Squeezing the columns instead would make
+          the eligibility text unreadable, so the row is stacked instead.
+        */}
+        {/* !important on the list utilities: PageShell wraps this in
+            .prose-jnu, whose `ul` rule is more specific than a bare utility
+            class and puts bullets and indentation back. */}
+        <ul className="m-0 mt-6 !list-none space-y-3 !pl-0 sm:hidden">
+          {de.programmes.map((p, i) => (
+            <li key={`${p.name}-${i}`} className="rounded border border-hair bg-white p-3">
+              <p className="m-0 text-[14px] font-semibold text-jnu-800">{p.name}</p>
+              <dl className="m-0 mt-2 grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-[13px]">
+                {[
+                  ['Award', p.award],
+                  ['Duration', p.duration],
+                  ['Eligibility', p.eligibility],
+                  ['Fee', p.fee],
+                ]
+                  .filter(([, v]) => v)
+                  .map(([label, value]) => (
+                    <div key={label} className="contents">
+                      <dt className="m-0 whitespace-nowrap text-muted">{label}</dt>
+                      <dd className="m-0">{value}</dd>
+                    </div>
+                  ))}
+              </dl>
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-6 hidden overflow-x-auto sm:block">
           <table className="w-full border-collapse text-[13.5px]">
             <thead>
               <tr>
@@ -89,6 +123,7 @@ export default async function DistanceEducationPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {de.note ? (
