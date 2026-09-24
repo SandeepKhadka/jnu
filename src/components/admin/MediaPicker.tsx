@@ -76,7 +76,7 @@ export function MediaPicker({
             ? 'Uploading and preparing sizes…'
             : kind === 'IMAGE'
               ? 'JPG, PNG, WebP or GIF up to 15 MB. Smaller sizes are generated automatically.'
-              : 'PDF up to 20 MB.'}
+              : 'PDF up to 50 MB. Compress large scans at ilovepdf.com before uploading.'}
         </span>
       </div>
 

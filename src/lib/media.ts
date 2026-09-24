@@ -31,7 +31,23 @@ import {
 
 const IMAGE_WIDTHS = [320, 640, 1024, 1600, 2400]
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024
-const MAX_DOC_BYTES = 20 * 1024 * 1024
+
+/**
+ * 50 MB, which covers essentially every real scanned document the office
+ * produces. It is not higher for three reasons: the whole upload is buffered
+ * in memory before anything else happens, Cloudflare's free tier refuses
+ * bodies over 100 MB anyway, and a file this large is nearly always a scan
+ * saved at camera resolution — better compressed than accommodated.
+ *
+ * Images have no equivalent problem: sharp re-encodes them to AVIF/WebP/JPEG
+ * at five widths, so a 14 MB photograph is already served as ~40 KB.
+ */
+const MAX_DOC_BYTES = 50 * 1024 * 1024
+
+/** "63.4 MB" — for an error message that names the actual file. */
+function mb(bytes: number): string {
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
 
 /**
  * Magic numbers only. SVG is deliberately not accepted: it can carry script,
@@ -71,11 +87,27 @@ export async function storeMedia(file: File, actorEmail: string, alt = ''): Prom
     }
   }
 
+  // The message says what to DO, not just what the rule is. Staff hitting this
+  // are almost always holding a scan saved at camera resolution, and "PDFs must
+  // be 50 MB or smaller" leaves them stuck with a file they cannot use.
   if (type === 'application/pdf' && buf.length > MAX_DOC_BYTES) {
-    return { ok: false, error: 'PDFs must be 20 MB or smaller.' }
+    return {
+      ok: false,
+      error:
+        `This PDF is ${mb(buf.length)}, over the 50 MB limit. It is most likely a scan ` +
+        'saved at full camera resolution. Compress it at ilovepdf.com/compress_pdf — it ' +
+        'takes about 30 seconds and the text stays sharp — or rescan at 300 DPI in ' +
+        'greyscale, then upload again.',
+    }
   }
   if (type !== 'application/pdf' && buf.length > MAX_IMAGE_BYTES) {
-    return { ok: false, error: 'Images must be 15 MB or smaller.' }
+    return {
+      ok: false,
+      error:
+        `This image is ${mb(buf.length)}, over the 15 MB limit. Resize it to about ` +
+        '2400 pixels on its longest side and upload again — the website generates its ' +
+        'own smaller versions from there, so nothing larger is used.',
+    }
   }
 
   const id = randomBytes(12).toString('hex')

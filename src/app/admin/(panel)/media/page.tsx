@@ -85,6 +85,26 @@ export default function MediaLibrary() {
           </Button>
         }
       />
+      {/*
+        Shown before anyone hits the limit rather than only in the error. Staff
+        who scan a document at camera resolution have no reason to expect a
+        problem, and telling them afterwards means a wasted upload on what is
+        often a slow connection.
+      */}
+      <p className="m-0 mb-4 text-[12px] leading-relaxed text-muted">
+        JPG, PNG, WebP, GIF or PDF. Images up to 15 MB, PDFs up to 50 MB. A scan
+        larger than that is saved at camera resolution — compress it at{' '}
+        <a
+          href="https://www.ilovepdf.com/compress_pdf"
+          target="_blank"
+          rel="noreferrer noopener"
+          className="text-jnu-700"
+        >
+          ilovepdf.com
+        </a>{' '}
+        first, or rescan at 300 DPI. Smaller files open far faster for students on
+        mobile data.
+      </p>
       <StatusLine status={status} />
       <input
         ref={fileRef}
