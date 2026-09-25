@@ -66,6 +66,7 @@ export type CertificateRecord = {
   serial?: string | null
 }
 
+import { statusMessage } from './http-errors'
 import type { Role } from '@/lib/permissions'
 
 export type Session = {
@@ -111,7 +112,10 @@ async function api<T>(
     const body = await res.json().catch(() => null)
 
     if (!res.ok) {
-      return { ok: false, error: body?.error ?? `Request failed (${res.status}).` }
+      // Same fallback wording as the admin panel — a student reading "Request
+      // failed (500)" while checking their result is no better served by a
+      // status code than a registrar is.
+      return { ok: false, error: body?.error ?? statusMessage(res.status) }
     }
     return { ok: true, data: body as T }
   } catch {
