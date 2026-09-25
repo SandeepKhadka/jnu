@@ -383,6 +383,17 @@ export const DEFAULT_MENU: MenuItem[] = [
     ],
   },
   { label: 'Programmes', href: '/programmes/', auto: 'faculties' },
+  /*
+   * Top-level, not a child of Admission: the university asked for it in the
+   * main bar, and it is a mode of study rather than a step in applying.
+   *
+   * This is the ELEVENTH item, and the bar is sized for exactly eleven. The
+   * header is capped at 1210px on any monitor and these eleven measure 1099px
+   * at the tightened spacing in MainNav. A twelfth wraps the row onto two
+   * lines at every width, which reads as broken rather than as a design.
+   * Adding one means nesting or dropping another.
+   */
+  { label: 'Distance Education', href: '/distance-education/' },
   {
     label: 'Admission',
     href: '/admission/',
@@ -390,7 +401,6 @@ export const DEFAULT_MENU: MenuItem[] = [
       { label: 'Admission Process', href: '/admission/process/' },
       { label: 'Eligibility', href: '/admission/eligibility/' },
       { label: 'Fee Structure', href: '/admission/fee-structure/' },
-      { label: 'Distance Education', href: '/distance-education/' },
       { label: 'Syllabus', href: '/admission/syllabus/' },
       { label: 'Download Forms', href: '/admission/download-forms/' },
     ],
