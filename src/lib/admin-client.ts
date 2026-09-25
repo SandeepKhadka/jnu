@@ -33,6 +33,29 @@ export async function api<T = unknown>(path: string, init?: RequestInit): Promis
     })
     const data = await res.json().catch(() => null)
     if (!res.ok) {
+      /*
+       * 413 does not come from this application. The host or the CDN in front
+       * of it refused the body before any route handler ran, so there is no
+       * JSON error to read and the generic "Request failed (413)" tells the
+       * reader nothing they can act on.
+       *
+       * It is worth naming because the ceiling is invisible and much lower
+       * than the app's own: Vercel Functions cap a request body at 4.5 MB and
+       * that cannot be raised at any plan level, while Cloudflare's free tier
+       * caps at 100 MB. A 20 MB scan the media library would happily accept
+       * is rejected upstream with no explanation at all.
+       */
+      if (res.status === 413) {
+        return {
+          ok: false,
+          status: 413,
+          error:
+            'The server refused this upload because the file is too large for the ' +
+            'hosting platform — this limit is outside the website and cannot be ' +
+            'changed here. Compress the file and try again, or upload it from a ' +
+            'server without this restriction.',
+        }
+      }
       return { ok: false, status: res.status, error: data?.error ?? `Request failed (${res.status}).` }
     }
     return { ok: true, data: data as T }
